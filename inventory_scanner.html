@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#28a745">
+    <title>Inventory Scanner - Company Name</title>
+    <link rel="manifest" href="/manifest.json">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f5f5;
+            padding-bottom: 80px;
+        }
+        .header {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .scanner-container {
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 0 15px;
+        }
+        .camera-view {
+            position: relative;
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            height: 400px;
+        }
+        #reader {
+            width: 100%;
+            height: 400px;
+            position: relative;
+            overflow: hidden;
+        }
+        #reader video {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: cover;
+        }
+        #reader canvas {
+            position: absolute !important;
+            top: 0;
+            left: 0;
+            width: 100% !important;
+            height: 100% !important;
+        }
+        .scan-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 85%;
+            height: 30%;
+            border: 3px solid #28a745;
+            border-radius: 8px;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .scan-line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(to right, transparent, #28a745, transparent);
+            animation: scan 2s ease-in-out infinite;
+        }
+        .scan-hint {
+            position: absolute;
+            bottom: 10px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            color: white;
+            font-size: 14px;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+            z-index: 11;
+            padding: 0 20px;
+        }
+        @keyframes scan {
+            0%, 100% { top: 0; }
+            50% { top: calc(100% - 2px); }
+        }
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .btn {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .btn-primary {
+            background: #28a745;
+            color: white;
+        }
+        .btn-primary:active {
+            background: #218838;
+            transform: scale(0.98);
+        }
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        .btn-secondary:active {
+            background: #5a6268;
+            transform: scale(0.98);
+        }
+        .btn-secondary.active {
+            background: #ffc107;
+            color: #000;
+        }
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .manual-entry {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .manual-entry input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        .product-info {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .product-info.success {
+            border-left: 4px solid #28a745;
+        }
+        .product-info.error {
+            border-left: 4px solid #dc3545;
+        }
+        .product-name {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .product-details {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 10px;
+            font-size: 14px;
+            color: #666;
+        }
+        .label {
+            font-weight: 600;
+        }
+        .scan-history {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .scan-history h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+        .history-item {
+            padding: 12px;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .history-item:last-child {
+            border-bottom: none;
+        }
+        .history-barcode {
+            font-family: monospace;
+            font-weight: bold;
+            color: #28a745;
+        }
+        .history-time {
+            font-size: 12px;
+            color: #6c757d;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #28a745;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            z-index: 1000;
+            animation: slideUp 0.3s;
+            max-width: 90%;
+        }
+        @keyframes slideUp {
+            from {
+                transform: translate(-50%, 100px);
+                opacity: 0;
+            }
+            to {
+                transform: translate(-50%, 0);
+                opacity: 1;
+            }
+        }
+        .scan-mode-toggle {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            background: white;
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .mode-option {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .mode-option input[type="radio"] {
+            margin-right: 8px;
+        }
+        .mode-option:has(input:checked) {
+            background: #28a745;
+            color: white;
+            border-color: #28a745;
+            font-weight: 600;
+        }
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            animation: fadeIn 0.3s;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+        }
+        .modal-content h3 {
+            margin-bottom: 20px;
+            color: #333;
+            text-align: center;
+        }
+        .quantity-input {
+            margin: 20px 0;
+        }
+        .quantity-input label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 600;
+            color: #333;
+        }
+        .quantity-input input {
+            width: 100%;
+            padding: 15px;
+            font-size: 24px;
+            text-align: center;
+            border: 2px solid #28a745;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+    <script>eruda.init();</script>
+</head>
+<body>
+    <div class="header">
+        <h1>📦 Inventory Scanner</h1>
+        <p>Company Name</p>
+    </div>
+
+    <div class="scanner-container">
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-value" id="todayScans">0</div>
+                <div class="stat-label">Today's Scans</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalItems">0</div>
+                <div class="stat-label">Total Items</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="uniqueProducts">0</div>
+                <div class="stat-label">Unique Products</div>
+            </div>
+        </div>
+
+        <div class="camera-view" id="cameraView" style="display: none;">
+            <div id="reader"></div>
+            <div class="scan-overlay">
+                <div class="scan-line"></div>
+            </div>
+            <div class="scan-hint">Hold barcode steady in the green box</div>
+        </div>
+
+        <div class="controls">
+            <button class="btn btn-primary" id="startScanBtn">📷 Start Camera</button>
+            <button class="btn btn-danger" id="stopScanBtn" style="display: none;">⏹️ Stop</button>
+            <button class="btn btn-secondary" id="flashlightBtn" style="display: none;">🔦 Flash</button>
+        </div>
+
+        <!-- PWA Install & Sync -->
+        <div class="controls" style="margin-top: 10px;">
+            <button class="btn btn-secondary" id="installBtn" style="display: none;">
+                📱 Install App
+            </button>
+            <button class="btn btn-secondary" id="syncBtn" style="display: none;">
+                🔄 Sync Offline Scans
+            </button>
+        </div>
+
+        <div class="scan-mode-toggle">
+            <label class="mode-option">
+                <input type="radio" name="scanMode" value="single" checked>
+                <span>Single Item</span>
+            </label>
+            <label class="mode-option">
+                <input type="radio" name="scanMode" value="bulk">
+                <span>Bulk Entry</span>
+            </label>
+        </div>
+
+        <div id="bulkModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <h3>Bulk Entry</h3>
+                <div class="product-info success" id="bulkProductInfo"></div>
+                <div class="quantity-input">
+                    <label for="bulkQuantity">Number of items:</label>
+                    <input type="number" id="bulkQuantity" min="1" value="1">
+                </div>
+                <div class="modal-buttons">
+                    <button class="btn btn-primary" id="confirmBulk">✓ Confirm</button>
+                    <button class="btn btn-secondary" id="cancelBulk">✗ Cancel</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="manual-entry">
+            <h3 style="margin-bottom: 15px;">Manual Entry</h3>
+            <input type="text" id="manualBarcode" placeholder="Enter barcode manually...">
+            <button class="btn btn-secondary" id="manualSubmit">✏️ Submit Barcode</button>
+        </div>
+
+        <div id="productDisplay"></div>
+
+        <div class="scan-history">
+            <h3>Recent Scans</h3>
+            <div id="historyList">
+                <p style="text-align: center; color: #6c757d;">No scans yet</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
+    <script>
+(function() {
+    var isScanning = false;
+    var scanHistory = [];
+    var detectionBuffer = {};
+    var REQUIRED_MATCHES = 3;
+    var BUFFER_TIMEOUT = 2000;
+    var scanMode = 'single';
+    var pendingBulkScan = null;
+    var videoTrack = null;
+    var flashlightOn = false;
+
+    var cameraView = document.getElementById('cameraView');
+    var startBtn = document.getElementById('startScanBtn');
+    var stopBtn = document.getElementById('stopScanBtn');
+    var flashlightBtn = document.getElementById('flashlightBtn');
+    var manualInput = document.getElementById('manualBarcode');
+    var manualSubmit = document.getElementById('manualSubmit');
+    var productDisplay = document.getElementById('productDisplay');
+    var historyList = document.getElementById('historyList');
+    var bulkModal = document.getElementById('bulkModal');
+    var bulkQuantity = document.getElementById('bulkQuantity');
+    var confirmBulk = document.getElementById('confirmBulk');
+    var cancelBulk = document.getElementById('cancelBulk');
+    var bulkProductInfo = document.getElementById('bulkProductInfo');
+    var installBtn = document.getElementById('installBtn');
+    var syncBtn = document.getElementById('syncBtn');
+    var deferredPrompt = null;
+
+    function startScanning() {
+        cameraView.style.display = 'block';
+        startBtn.style.display = 'none';
+        stopBtn.style.display = 'flex';
+        flashlightBtn.style.display = 'flex';
+        isScanning = true;
+        detectionBuffer = {};
+
+        Quagga.init({
+            inputStream: {
+                name: "Live",
+                type: "LiveStream",
+                target: document.querySelector('#reader'),
+                constraints: {
+                    width: { min: 640, ideal: 1280 },
+                    height: { min: 480, ideal: 720 },
+                    facingMode: "environment"
+                }
+            },
+            decoder: {
+                readers: ["code_39_reader", "code_128_reader", "ean_reader", "upc_reader"]
+            },
+            locate: true
+        }, function(err) {
+            if (err) {
+                console.error('QuaggaJS init error:', err);
+                showToast('Scanner failed: ' + err.message, 'error');
+                stopScanning();
+                return;
+            }
+            console.log("QuaggaJS initialized successfully");
+            Quagga.start();
+            
+            try {
+                var stream = Quagga.CameraAccess.getActiveTrack();
+                if (stream) {
+                    videoTrack = stream;
+                    var capabilities = videoTrack.getCapabilities();
+                    if (!capabilities.torch) {
+                        flashlightBtn.style.display = 'none';
+                    }
+                }
+            } catch (e) {
+                console.error('Error getting video track:', e);
+            }
+        });
+
+        Quagga.onDetected(onBarcodeDetected);
+    }
+
+    function stopScanning() {
+        if (isScanning) {
+            Quagga.stop();
+            cameraView.style.display = 'none';
+            startBtn.style.display = 'flex';
+            stopBtn.style.display = 'none';
+            flashlightBtn.style.display = 'none';
+            isScanning = false;
+            videoTrack = null;
+            flashlightOn = false;
+            flashlightBtn.classList.remove('active');
+            flashlightBtn.textContent = '🔦 Flash';
+        }
+    }
+
+    function toggleFlashlight() {
+        console.log('toggleFlashlight called');
+        if (!videoTrack) {
+            showToast('Flashlight not available', 'error');
+            return;
+        }
+
+        try {
+            var capabilities = videoTrack.getCapabilities();
+            if (!capabilities.torch) {
+                showToast('Flashlight not supported', 'error');
+                return;
+            }
+
+            flashlightOn = !flashlightOn;
+            videoTrack.applyConstraints({
+                advanced: [{ torch: flashlightOn }]
+            }).then(function() {
+                if (flashlightOn) {
+                    flashlightBtn.classList.add('active');
+                    flashlightBtn.textContent = '🔦 On';
+                } else {
+                    flashlightBtn.classList.remove('active');
+                    flashlightBtn.textContent = '🔦 Flash';
+                }
+            }).catch(function(error) {
+                console.error('Flashlight error:', error);
+                showToast('Flashlight failed', 'error');
+                flashlightOn = !flashlightOn;
+            });
+        } catch (error) {
+            console.error('Flashlight exception:', error);
+        }
+    }
+
+    function playBeep() {
+        try {
+            var audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            var oscillator = audioContext.createOscillator();
+            var gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.value = 800; // Frequency in Hz
+            oscillator.type = 'sine';
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.2);
+        } catch (e) {
+            console.error('Beep error:', e);
+        }
+    }
+
+    function onBarcodeDetected(result) {
+        if (!isScanning) return;
+        var code = result.codeResult.code;
+        
+        if (!detectionBuffer[code]) {
+            detectionBuffer[code] = { count: 0, firstSeen: Date.now() };
+        }
+        detectionBuffer[code].count++;
+        
+        console.log('Detected: ' + code + ' (' + detectionBuffer[code].count + '/' + REQUIRED_MATCHES + ')');
+
+        if (detectionBuffer[code].count >= REQUIRED_MATCHES) {
+            isScanning = false;
+            
+            // Play beep sound
+            playBeep();
+            
+            // Vibrate if supported
+            if (navigator.vibrate) navigator.vibrate(200);
+            
+            detectionBuffer = {};
+            
+            if (scanMode === 'bulk') {
+                handleBulkScan(code);
+            } else {
+                processBarcode(code, 1).then(function() {
+                    setTimeout(function() {
+                        if (Quagga && Quagga.CameraAccess) {
+                            isScanning = true;
+                        }
+                    }, 2000);
+                });
+            }
+        }
+    }
+
+    function processBarcode(barcode, quantity) {
+        showToast('Processing: ' + barcode, 'info');
+        
+        return fetch('inventory_api.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'scan',
+                barcode: barcode,
+                quantity: quantity,
+                device: navigator.userAgent,
+                timestamp: new Date().toISOString()
+            })
+        }).then(function(r) { 
+            return r.json(); 
+        }).then(function(data) {
+            if (data.success) {
+                displayProduct(data.product, true, quantity);
+                addToHistory(barcode, data.product, quantity);
+                updateStats();
+                showToast('✓ ' + (quantity > 1 ? quantity + 'x ' : '') + data.product.name, 'success');
+            } else if (data.offline) {
+                // Service Worker returned offline response
+                console.log('Offline mode - saving locally');
+                saveOffline(barcode, quantity);
+                displayProduct({ barcode: barcode, name: 'Saved Offline' }, true, quantity);
+                showToast('📴 Saved offline (' + barcode + ')', 'warning');
+            } else {
+                displayProduct({ barcode: barcode }, false);
+                showToast('Product not found', 'error');
+            }
+        }).catch(function(error) {
+            console.error('Network error:', error);
+            saveOffline(barcode, quantity);
+            displayProduct({ barcode: barcode, name: 'Saved Offline' }, true, quantity);
+            showToast('📴 Saved offline - will sync later', 'warning');
+        });
+    }
+
+    function handleBulkScan(barcode) {
+        stopScanning();
+        fetch('inventory_api.php?action=lookup&barcode=' + encodeURIComponent(barcode))
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) {
+                pendingBulkScan = { barcode: barcode, product: data.product };
+                bulkProductInfo.innerHTML = '<div class="product-name">' + data.product.name + '</div>';
+                bulkModal.style.display = 'flex';
+                bulkQuantity.value = 1;
+                setTimeout(function() { bulkQuantity.focus(); }, 100);
+            } else {
+                showToast('Product not found', 'error');
+            }
+        });
+    }
+
+    function confirmBulkEntry() {
+        var qty = parseInt(bulkQuantity.value);
+        if (!qty || qty < 1) return;
+        
+        if (pendingBulkScan) {
+            bulkModal.style.display = 'none';
+            processBarcode(pendingBulkScan.barcode, qty).then(function() {
+                pendingBulkScan = null;
+                setTimeout(function() {
+                    if (confirm('Continue scanning?')) startScanning();
+                }, 500);
+            });
+        }
+    }
+
+    function cancelBulkEntry() {
+        bulkModal.style.display = 'none';
+        pendingBulkScan = null;
+    }
+
+    function displayProduct(product, found, quantity) {
+        var html = '<div class="product-info ' + (found ? 'success' : 'error') + '">' +
+            '<div class="product-name">' + (found ? product.name : 'Not Found') + 
+            (quantity > 1 ? ' <strong>(' + quantity + ' items)</strong>' : '') + '</div>' +
+            '<div class="product-details">' +
+            '<span class="label">Barcode:</span><span>' + product.barcode + '</span>' +
+            '</div></div>';
+        productDisplay.innerHTML = html;
+    }
+
+    function addToHistory(barcode, product, quantity) {
+        scanHistory.unshift({ barcode: barcode, product: product, quantity: quantity, time: new Date() });
+        if (scanHistory.length > 10) scanHistory = scanHistory.slice(0, 10);
+        renderHistory();
+    }
+
+    function renderHistory() {
+        if (scanHistory.length === 0) {
+            historyList.innerHTML = '<p style="text-align: center; color: #6c757d;">No scans yet</p>';
+            return;
+        }
+        var html = scanHistory.map(function(item) {
+            return '<div class="history-item"><div><div class="history-barcode">' + item.barcode + '</div>' +
+                '<div>' + item.product.name + (item.quantity > 1 ? ' (' + item.quantity + 'x)' : '') + '</div></div>' +
+                '<div class="history-time">' + item.time.toLocaleTimeString() + '</div></div>';
+        }).join('');
+        historyList.innerHTML = html;
+    }
+
+    function updateStats() {
+        var totalItems = scanHistory.reduce(function(sum, item) { return sum + (item.quantity || 1); }, 0);
+        document.getElementById('todayScans').textContent = scanHistory.length;
+        document.getElementById('totalItems').textContent = totalItems;
+        var unique = {};
+        scanHistory.forEach(function(s) { unique[s.barcode] = true; });
+        document.getElementById('uniqueProducts').textContent = Object.keys(unique).length;
+    }
+
+    function showToast(message, type) {
+        var existing = document.querySelector('.toast');
+        if (existing) existing.remove();
+        var toast = document.createElement('div');
+        toast.className = 'toast';
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        setTimeout(function() { toast.remove(); }, 3000);
+    }
+
+    function saveOffline(barcode, quantity) {
+        var offline = JSON.parse(localStorage.getItem('offlineScans') || '[]');
+        offline.push({
+            barcode: barcode,
+            quantity: quantity,
+            timestamp: new Date().toISOString(),
+            device: navigator.userAgent
+        });
+        localStorage.setItem('offlineScans', JSON.stringify(offline));
+        updateSyncButton();
+    }
+
+    function updateSyncButton() {
+        var offline = JSON.parse(localStorage.getItem('offlineScans') || '[]');
+        if (offline.length > 0) {
+            syncBtn.style.display = 'flex';
+            syncBtn.textContent = '🔄 Sync (' + offline.length + ')';
+        } else {
+            syncBtn.style.display = 'none';
+        }
+    }
+
+    function syncOfflineScans() {
+        var offline = JSON.parse(localStorage.getItem('offlineScans') || '[]');
+        
+        if (offline.length === 0) {
+            showToast('No offline scans to sync', 'info');
+            return;
+        }
+
+        showToast('Syncing ' + offline.length + ' scans...', 'info');
+
+        fetch('inventory_api.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'sync',
+                scans: offline
+            })
+        }).then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) {
+                localStorage.removeItem('offlineScans');
+                updateSyncButton();
+                showToast('✓ Synced ' + data.synced + ' scans', 'success');
+                
+                if (data.errors && data.errors.length > 0) {
+                    console.log('Sync errors:', data.errors);
+                    showToast(data.errors.length + ' items failed to sync', 'warning');
+                }
+            } else {
+                showToast('Sync failed: ' + (data.error || 'Unknown error'), 'error');
+            }
+        }).catch(function(error) {
+            console.error('Sync error:', error);
+            showToast('Network error - will retry later', 'error');
+        });
+    }
+
+    function installPWA() {
+        if (!deferredPrompt) {
+            showToast('App already installed or not available', 'info');
+            return;
+        }
+
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then(function(choiceResult) {
+            if (choiceResult.outcome === 'accepted') {
+                showToast('App installed successfully!', 'success');
+            }
+            deferredPrompt = null;
+            installBtn.style.display = 'none';
+        });
+    }
+
+    startBtn.addEventListener('click', startScanning);
+    stopBtn.addEventListener('click', stopScanning);
+    flashlightBtn.addEventListener('click', toggleFlashlight);
+    confirmBulk.addEventListener('click', confirmBulkEntry);
+    cancelBulk.addEventListener('click', cancelBulkEntry);
+    installBtn.addEventListener('click', installPWA);
+    syncBtn.addEventListener('click', syncOfflineScans);
+
+    document.querySelectorAll('input[name="scanMode"]').forEach(function(radio) {
+        radio.addEventListener('change', function(e) {
+            scanMode = e.target.value;
+            showToast('Mode: ' + (scanMode === 'bulk' ? 'Bulk' : 'Single'), 'info');
+        });
+    });
+
+    manualSubmit.addEventListener('click', function() {
+        var barcode = manualInput.value.trim();
+        if (barcode) {
+            if (scanMode === 'bulk') {
+                handleBulkScan(barcode);
+            } else {
+                processBarcode(barcode, 1);
+            }
+            manualInput.value = '';
+        }
+    });
+
+    // PWA install prompt
+    window.addEventListener('beforeinstallprompt', function(e) {
+        e.preventDefault();
+        deferredPrompt = e;
+        installBtn.style.display = 'flex';
+        console.log('PWA install prompt available');
+    });
+
+    // Check if already installed
+    window.addEventListener('appinstalled', function() {
+        installBtn.style.display = 'none';
+        showToast('App installed successfully!', 'success');
+    });
+
+    // Initialize - check for offline scans on load
+    document.addEventListener('DOMContentLoaded', function() {
+        updateSyncButton();
+        console.log('Scanner initialized');
+    });
+
+    // Call immediately if DOM already loaded
+    if (document.readyState === 'loading') {
+        // Wait for DOMContentLoaded
+    } else {
+        updateSyncButton();
+    }
+
+    // Register Service Worker for offline support
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/svp/service-worker.js', { scope: '/svp/' })
+            .then(function(registration) {
+                console.log('Service Worker registered with scope:', registration.scope);
+                
+                // Check registration state
+                if (registration.installing) {
+                    console.log('Service Worker installing...');
+                    var installingWorker = registration.installing;
+                    installingWorker.addEventListener('statechange', function() {
+                        if (installingWorker.state === 'installed') {
+                            if (navigator.serviceWorker.controller) {
+                                console.log('New SW installed, reloading...');
+                                window.location.reload();
+                            } else {
+                                console.log('SW installed for first time, reloading...');
+                                window.location.reload();
+                            }
+                        }
+                    });
+                } else if (registration.waiting) {
+                    console.log('Service Worker waiting, activating now...');
+                    registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+                    window.location.reload();
+                } else if (registration.active) {
+                    console.log('Service Worker active and ready!');
+                }
+                
+                // Listen for updates
+                registration.addEventListener('updatefound', function() {
+                    console.log('Service Worker update found!');
+                });
+            })
+            .catch(function(error) {
+                console.log('Service Worker registration failed:', error);
+            });
+            
+        // Check if Service Worker is controlling the page
+        if (navigator.serviceWorker.controller) {
+            console.log('✅ Page IS controlled by Service Worker');
+        } else {
+            console.log('❌ Page NOT controlled by Service Worker - refresh may be needed');
+        }
+        
+        // Listen for controller change
+        navigator.serviceWorker.addEventListener('controllerchange', function() {
+            console.log('Controller changed, reloading...');
+            window.location.reload();
+        });
+    } else {
+        console.log('Service Workers not supported in this browser');
+    }
+})();
+    </script>
+</body>
+</html>

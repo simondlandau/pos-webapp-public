@@ -1,0 +1,16 @@
+# Ignore sensitive config and logs
+config.php
+*.log
+ssh_droplet.txt
+
+# Ignore vendor libraries (can be restored with composer)
+vendor/
+composer.lock
+
+# Ignore OS & IDE files
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
