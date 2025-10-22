@@ -24,7 +24,7 @@ A comprehensive PHP-based web application suite for charity shop management, com
 This application suite provides:
 - **Financial Reconciliation**: End-of-day cash counting and POS reconciliation
 - **Reporting Dashboard**: Real-time business intelligence from MySQL and MSSQL databases
-- **Inventory Management**: Offline-capable PWA for smartphone-based barcode scanning
+- **Inventory Management**: PWA for smartphone-based barcode scanning
 - **Automated Notifications**: Daily email reports with Excel attachments
 
 **Tech Stack**: PHP 8.1+, MySQL 8+, MSSQL Server, Apache2, Service Workers, QuaggaJS
@@ -53,7 +53,7 @@ This application suite provides:
 - ✅ **Bulk entry** - Scan once, enter quantity for multiple items
 - ✅ **Camera flashlight** toggle for low-light scanning
 - ✅ **Audio feedback** - Beep on successful scan
-- ✅ **Service Worker** caching for offline functionality
+- ✅ **Service Worker** caching for offline functionality ⚠️ Removed - iPhone glitch
 
 ---
 
@@ -149,8 +149,6 @@ sudo /opt/lampp/lampp start
 |------|---------|
 | `header.php` | Common page header with navigation |
 | `footer.php` | Common page footer |
-| `manifest.json` | PWA manifest for install prompt |
-| `service-worker.js` | Service Worker for offline functionality |
 
 ---
 
@@ -185,7 +183,7 @@ The inventory scanner is a **Progressive Web App** that works on any smartphone 
 - Perfect for receiving stock
 - Example: Scan → Enter "24" → All 24 items recorded
 
-#### Offline Capability
+#### Offline Capability ⚠️ Removed as unforeseen iPhone service file glitch
 - Works without internet after first load
 - Scans saved to device storage
 - Syncs automatically when online
@@ -210,7 +208,7 @@ For detailed scanner documentation, see [docs/SCANNER_README.md](docs/SCANNER_RE
 
 ## 🔧 Configuration
 
-### 1. Database Setup
+### 1. Database Setup 
 
 Edit `config.php` with your credentials:
 ```php
@@ -234,7 +232,7 @@ Edit header and footer files:
 - `footer.php` - Copyright, contact information
 - Report headers in individual PHP files
 
-### 3. Email Configuration
+### 3. Email Configuration ⚠️ Unnecesary if config.php configured 
 
 Edit `send_daily.php` for automated reports:
 ```php
@@ -349,7 +347,7 @@ This project is provided as-is for use by nonprofit organizations and charity sh
 
 **Developer**: Simon Landau  
 **Email**: simon@landau.ws  
-**Repository**: [github.com/simondlandau/svp-webapp](https://github.com/simondlandau/svp-webapp)
+**Repository**: [github.com/simondlandau/pos-webapp-public](https://github.com/simondlandau/pos-webapp-public)
 
 ---
 

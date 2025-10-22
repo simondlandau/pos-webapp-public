@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#28a745">
-    <title>Inventory Scanner - Company Name</title>
+    <title>Inventory Scanner - Company</title>
     <link rel="manifest" href="/manifest.json">
     <style>
         * {
@@ -382,16 +382,6 @@
             <button class="btn btn-secondary" id="flashlightBtn" style="display: none;">🔦 Flash</button>
         </div>
 
-        <!-- PWA Install & Sync -->
-        <div class="controls" style="margin-top: 10px;">
-            <button class="btn btn-secondary" id="installBtn" style="display: none;">
-                📱 Install App
-            </button>
-            <button class="btn btn-secondary" id="syncBtn" style="display: none;">
-                🔄 Sync Offline Scans
-            </button>
-        </div>
-
         <div class="scan-mode-toggle">
             <label class="mode-option">
                 <input type="radio" name="scanMode" value="single" checked>
@@ -460,9 +450,6 @@
     var confirmBulk = document.getElementById('confirmBulk');
     var cancelBulk = document.getElementById('cancelBulk');
     var bulkProductInfo = document.getElementById('bulkProductInfo');
-    var installBtn = document.getElementById('installBtn');
-    var syncBtn = document.getElementById('syncBtn');
-    var deferredPrompt = null;
 
     function startScanning() {
         cameraView.style.display = 'block';
@@ -635,29 +622,17 @@
                 device: navigator.userAgent,
                 timestamp: new Date().toISOString()
             })
-        }).then(function(r) { 
-            return r.json(); 
-        }).then(function(data) {
+        }).then(function(r) { return r.json(); })
+        .then(function(data) {
             if (data.success) {
                 displayProduct(data.product, true, quantity);
                 addToHistory(barcode, data.product, quantity);
                 updateStats();
                 showToast('✓ ' + (quantity > 1 ? quantity + 'x ' : '') + data.product.name, 'success');
-            } else if (data.offline) {
-                // Service Worker returned offline response
-                console.log('Offline mode - saving locally');
-                saveOffline(barcode, quantity);
-                displayProduct({ barcode: barcode, name: 'Saved Offline' }, true, quantity);
-                showToast('📴 Saved offline (' + barcode + ')', 'warning');
             } else {
                 displayProduct({ barcode: barcode }, false);
                 showToast('Product not found', 'error');
             }
-        }).catch(function(error) {
-            console.error('Network error:', error);
-            saveOffline(barcode, quantity);
-            displayProduct({ barcode: barcode, name: 'Saved Offline' }, true, quantity);
-            showToast('📴 Saved offline - will sync later', 'warning');
         });
     }
 
@@ -746,88 +721,11 @@
         setTimeout(function() { toast.remove(); }, 3000);
     }
 
-    function saveOffline(barcode, quantity) {
-        var offline = JSON.parse(localStorage.getItem('offlineScans') || '[]');
-        offline.push({
-            barcode: barcode,
-            quantity: quantity,
-            timestamp: new Date().toISOString(),
-            device: navigator.userAgent
-        });
-        localStorage.setItem('offlineScans', JSON.stringify(offline));
-        updateSyncButton();
-    }
-
-    function updateSyncButton() {
-        var offline = JSON.parse(localStorage.getItem('offlineScans') || '[]');
-        if (offline.length > 0) {
-            syncBtn.style.display = 'flex';
-            syncBtn.textContent = '🔄 Sync (' + offline.length + ')';
-        } else {
-            syncBtn.style.display = 'none';
-        }
-    }
-
-    function syncOfflineScans() {
-        var offline = JSON.parse(localStorage.getItem('offlineScans') || '[]');
-        
-        if (offline.length === 0) {
-            showToast('No offline scans to sync', 'info');
-            return;
-        }
-
-        showToast('Syncing ' + offline.length + ' scans...', 'info');
-
-        fetch('inventory_api.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                action: 'sync',
-                scans: offline
-            })
-        }).then(function(r) { return r.json(); })
-        .then(function(data) {
-            if (data.success) {
-                localStorage.removeItem('offlineScans');
-                updateSyncButton();
-                showToast('✓ Synced ' + data.synced + ' scans', 'success');
-                
-                if (data.errors && data.errors.length > 0) {
-                    console.log('Sync errors:', data.errors);
-                    showToast(data.errors.length + ' items failed to sync', 'warning');
-                }
-            } else {
-                showToast('Sync failed: ' + (data.error || 'Unknown error'), 'error');
-            }
-        }).catch(function(error) {
-            console.error('Sync error:', error);
-            showToast('Network error - will retry later', 'error');
-        });
-    }
-
-    function installPWA() {
-        if (!deferredPrompt) {
-            showToast('App already installed or not available', 'info');
-            return;
-        }
-
-        deferredPrompt.prompt();
-        deferredPrompt.userChoice.then(function(choiceResult) {
-            if (choiceResult.outcome === 'accepted') {
-                showToast('App installed successfully!', 'success');
-            }
-            deferredPrompt = null;
-            installBtn.style.display = 'none';
-        });
-    }
-
     startBtn.addEventListener('click', startScanning);
     stopBtn.addEventListener('click', stopScanning);
     flashlightBtn.addEventListener('click', toggleFlashlight);
     confirmBulk.addEventListener('click', confirmBulkEntry);
     cancelBulk.addEventListener('click', cancelBulkEntry);
-    installBtn.addEventListener('click', installPWA);
-    syncBtn.addEventListener('click', syncOfflineScans);
 
     document.querySelectorAll('input[name="scanMode"]').forEach(function(radio) {
         radio.addEventListener('change', function(e) {
@@ -847,87 +745,6 @@
             manualInput.value = '';
         }
     });
-
-    // PWA install prompt
-    window.addEventListener('beforeinstallprompt', function(e) {
-        e.preventDefault();
-        deferredPrompt = e;
-        installBtn.style.display = 'flex';
-        console.log('PWA install prompt available');
-    });
-
-    // Check if already installed
-    window.addEventListener('appinstalled', function() {
-        installBtn.style.display = 'none';
-        showToast('App installed successfully!', 'success');
-    });
-
-    // Initialize - check for offline scans on load
-    document.addEventListener('DOMContentLoaded', function() {
-        updateSyncButton();
-        console.log('Scanner initialized');
-    });
-
-    // Call immediately if DOM already loaded
-    if (document.readyState === 'loading') {
-        // Wait for DOMContentLoaded
-    } else {
-        updateSyncButton();
-    }
-
-    // Register Service Worker for offline support
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/svp/service-worker.js', { scope: '/svp/' })
-            .then(function(registration) {
-                console.log('Service Worker registered with scope:', registration.scope);
-                
-                // Check registration state
-                if (registration.installing) {
-                    console.log('Service Worker installing...');
-                    var installingWorker = registration.installing;
-                    installingWorker.addEventListener('statechange', function() {
-                        if (installingWorker.state === 'installed') {
-                            if (navigator.serviceWorker.controller) {
-                                console.log('New SW installed, reloading...');
-                                window.location.reload();
-                            } else {
-                                console.log('SW installed for first time, reloading...');
-                                window.location.reload();
-                            }
-                        }
-                    });
-                } else if (registration.waiting) {
-                    console.log('Service Worker waiting, activating now...');
-                    registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-                    window.location.reload();
-                } else if (registration.active) {
-                    console.log('Service Worker active and ready!');
-                }
-                
-                // Listen for updates
-                registration.addEventListener('updatefound', function() {
-                    console.log('Service Worker update found!');
-                });
-            })
-            .catch(function(error) {
-                console.log('Service Worker registration failed:', error);
-            });
-            
-        // Check if Service Worker is controlling the page
-        if (navigator.serviceWorker.controller) {
-            console.log('✅ Page IS controlled by Service Worker');
-        } else {
-            console.log('❌ Page NOT controlled by Service Worker - refresh may be needed');
-        }
-        
-        // Listen for controller change
-        navigator.serviceWorker.addEventListener('controllerchange', function() {
-            console.log('Controller changed, reloading...');
-            window.location.reload();
-        });
-    } else {
-        console.log('Service Workers not supported in this browser');
-    }
 })();
     </script>
 </body>
