@@ -218,8 +218,7 @@ Edit `config.example.php` with your credentials and rename to `config.php`:
  * Example configuration file for SVP Web Application.
  * Copy this file to config.php and update credentials accordingly.
 ``` 
-
-// ------------------ MySQL ------------------
+** ------------------ MySQL ------------------
 define("DB_HOST", "localhost");
 define("DB_NAME", "svp");
 define("DB_USER", "your_mysql_user");
@@ -239,10 +238,10 @@ try {
     die("MySQL connection failed: " . htmlspecialchars($e->getMessage()));
 }
 
-// ------------------ MSSQL ------------------
-// For Windows/XAMPP: use pdo_sqlsrv
-// For Ubuntu/Linux: use pdo_odbc (DSN defined in /etc/odbc.ini)
-$server   = "127.0.0.1,1433";  // or use DSN: 'odbc:MSSQL_SVP'
+** ------------------ MSSQL ------------------
+- For Windows/XAMPP: use pdo_sqlsrv
+- For Ubuntu/Linux: use pdo_odbc (DSN defined in /etc/odbc.ini)
+$server   = "127.0.0.1,1433";  - or use DSN: 'odbc:MSSQL_SVP'
 $dbname   = "svp";
 $username = "your_mssql_user";
 $password = "your_mssql_password";
@@ -264,7 +263,7 @@ try {
     die("MSSQL connection failed: " . $e->getMessage());
 }
 
-// ------------------ SMTP / Email ------------------
+** ------------------ SMTP / Email ------------------
 define('SMTP_HOST', 'smtp.yourserver.com');
 define('SMTP_PORT', 587);
 define('SMTP_USER', 'your_email@example.com');
