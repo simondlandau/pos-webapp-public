@@ -202,13 +202,13 @@ The inventory scanner is a **Progressive Web App** that works on any smartphone 
 - Modern browser with getUserMedia API
 - Service Worker support
 
-For detailed scanner documentation, see [docs/scanner_README.md](docs/scanner_README.md)
+For detailed scanner documentation, see [docs/Scanner_README.md](docs/Scanner_README.md)
 
 ---
 
 ## 🔧 Configuration
 
-## 1. Database Setup 
+### 1. Database Setup 
 
 Edit `config.example.php` with your credentials and rename to `config.php`:
 ```
@@ -281,7 +281,7 @@ Edit header and footer files:
 - `footer.php` - Copyright, contact information
 - Report headers in individual PHP files
 
-### 3. Email Configuration ⚠️ Unnecesary if config.php configured 
+### 3. Email Configuration ⚠️ Unnecessary if config.php configured 
 
 Edit `send_daily.php` for automated reports:
 ```php
@@ -371,40 +371,42 @@ CREATE TABLE InventoryScans (
 );
 ```
 
-For complete schema, see `schema/database.sql`, `schema/create_inventory_table.php`
+For complete schema, see
+- [schema/database.sql](schema/database.sql)
+- [schema/create_inventory_table.php](schema/create_inventory_table.php)
 
-#### Setup automated inventory updates:
-# Windows Scheduler:
-1. Windows Task Scheduler (Primary automated sync)
-Create the batch file if you haven't already:
-C:\xampp\htdocs\svp\run_sync.bat1. Windows Task Scheduler (Primary automated sync)
-
+### Setup automated inventory updates:
+#### Windows Scheduler:
+**Windows Task Scheduler (Primary automated sync)**
+- Create the batch file if you haven't already:
+```C:\xampp\htdocs\svp\run_sync.bat1. Windows Task Scheduler (Primary automated sync)
+```
+- Enter this code in the file:
 ```@echo off
 SET PHP_PATH=C:\xampp\php\php.exe
 SET SCRIPT_PATH=C:\xampp\htdocs\svp\sync_pos_sales.php
 
 "%PHP_PATH%" "%SCRIPT_PATH%"
 ```
-2. Task Scheduler Setup:
-
-Open Task Scheduler (Win + R → taskschd.msc)
+**Task Scheduler Setup:**
+#### Open Task Scheduler 
+```(Win + R → taskschd.msc)
 Create Task:
-
 Name: SVP POS Sync
 Trigger: Daily at 10:00 AM
-
 Repeat every: 15 minutes
 For a duration of: 8 hours
+```
+**Action: Start program →** 
+```C:\xampp\htdocs\svp\run_sync.bat
+```
+**Conditions:**
+1. ✅ Run only if computer is on AC power (unchecked)
+2. ✅ Wake computer to run (optional)
 
+**Ubuntu crontab:**
 
-Action: Start program → C:\xampp\htdocs\svp\run_sync.bat
-Conditions:
-✅ Run only if computer is on AC power (unchecked)
-✅ Wake computer to run (optional)
-
-# Ubuntu crontab:
-
-1. Add to crontab (Mon-Sat, 10:00-17:00, every 15 minutes):
+#### Add to crontab (Mon-Sat, 10:00-17:00, every 15 minutes):
 
 ```bash
 crontab -e
