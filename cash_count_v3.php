@@ -6,7 +6,7 @@ require_once 'config.php';
 
 // Set page variables for header
 $pageTitle = 'Cash Reconciliation v3';
-$headerTitle = 'Cash Reconciliation - Example Retail POS Company Name';
+$headerTitle = 'Cash Reconciliation - St. Vincents, Main Street, Letterkenny';
 $additionalCSS = '
 <style>
 /* Table and input sizing */

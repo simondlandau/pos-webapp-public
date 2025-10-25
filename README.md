@@ -210,19 +210,68 @@ For detailed scanner documentation, see [docs/SCANNER_README.md](docs/SCANNER_RE
 
 ### 1. Database Setup 
 
-Edit `config.php` with your credentials:
-```php
-// MySQL Configuration
-$mysql_host = 'localhost';
-$mysql_db = 'svp';
-$mysql_user = 'your_username';
-$mysql_pass = 'your_password';
+Edit `config.example.php` with your credentials and rename to `config.php`:
+<?php
+/**
+ * config.example.php
+ * 
+ * Example configuration file for SVP Web Application.
+ * Copy this file to config.php and update credentials accordingly.
+ */
 
-// MSSQL Configuration (optional)
-$mssql_server = '192.168.1.1\SQLEXPRESS,49987';
-$mssql_db = 'pos_database';
-$mssql_user = 'pos_user';
-$mssql_pass = 'pos_password';
+// ------------------ MySQL ------------------
+define("DB_HOST", "localhost");
+define("DB_NAME", "svp");
+define("DB_USER", "your_mysql_user");
+define("DB_PASS", "your_mysql_password");
+
+try {
+    $pdo = new PDO(
+        "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8mb4",
+        DB_USER,
+        DB_PASS,
+        [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        ]
+    );
+} catch (PDOException $e) {
+    die("MySQL connection failed: " . htmlspecialchars($e->getMessage()));
+}
+
+// ------------------ MSSQL ------------------
+// For Windows/XAMPP: use pdo_sqlsrv
+// For Ubuntu/Linux: use pdo_odbc (DSN defined in /etc/odbc.ini)
+$server   = "127.0.0.1,1433";  // or use DSN: 'odbc:MSSQL_SVP'
+$dbname   = "svp";
+$username = "your_mssql_user";
+$password = "your_mssql_password";
+
+if (extension_loaded("pdo_sqlsrv")) {
+    $dsn = "sqlsrv:Server=$server;Database=$dbname";
+} elseif (extension_loaded("pdo_odbc")) {
+    $dsn = "odbc:MSSQL_SVP";
+} else {
+    die("No suitable MSSQL driver found (pdo_sqlsrv or odbc required).");
+}
+
+try {
+    $sqlsrv_pdo = new PDO($dsn, $username, $password, [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+    ]);
+} catch (PDOException $e) {
+    die("MSSQL connection failed: " . $e->getMessage());
+}
+
+// ------------------ SMTP / Email ------------------
+define('SMTP_HOST', 'smtp.yourserver.com');
+define('SMTP_PORT', 587);
+define('SMTP_USER', 'your_email@example.com');
+define('SMTP_PASS', 'your_email_password');
+define('SMTP_FROM_EMAIL', 'your_email@example.com');
+define('SMTP_FROM_NAME', 'Your App Name');
+define('SMTP_BCC', 'optional_bcc@example.com');
 ```
 
 ### 2. Customize Branding
@@ -244,7 +293,7 @@ $smtp_port = 587;
 
 ### 4. Test Installation
 
-Three test scripts are provided:
+Four test scripts are provided:
 ```bash
 # Test logo and branding
 https://your-domain.com/svp/test_logo.php
@@ -254,6 +303,9 @@ https://your-domain.com/svp/test_dashboard.php
 
 # Test inventory scanner
 https://your-domain.com/svp/test_inventory.php
+
+# Test phpMailer
+https://your-domain.com/svp/test_phpmailer.php
 ```
 
 ---
@@ -296,7 +348,7 @@ sudo chmod 600 /var/www/html/svp/config.php
 
 ---
 
-## 📊 Database Schema
+## 📊 Inventory Database Schema
 
 ### InventoryScans Table
 ```sql
@@ -318,7 +370,53 @@ CREATE TABLE InventoryScans (
 );
 ```
 
-For complete schema, see `schema/database.sql`
+For complete schema, see `schema/database.sql`, `schema/create_inventory_table.php`
+
+#### Setup automated inventory updates:
+# Windows Scheduler:
+1. Windows Task Scheduler (Primary automated sync)
+Create the batch file if you haven't already:
+C:\xampp\htdocs\svp\run_sync.bat1. Windows Task Scheduler (Primary automated sync)
+
+```@echo off
+SET PHP_PATH=C:\xampp\php\php.exe
+SET SCRIPT_PATH=C:\xampp\htdocs\svp\sync_pos_sales.php
+
+"%PHP_PATH%" "%SCRIPT_PATH%"
+```
+2. Task Scheduler Setup:
+
+Open Task Scheduler (Win + R → taskschd.msc)
+Create Task:
+
+Name: SVP POS Sync
+Trigger: Daily at 10:00 AM
+
+Repeat every: 15 minutes
+For a duration of: 8 hours
+
+
+Action: Start program → C:\xampp\htdocs\svp\run_sync.bat
+Conditions:
+✅ Run only if computer is on AC power (unchecked)
+✅ Wake computer to run (optional)
+
+# Ubuntu crontab:
+
+1. Add to crontab (Mon-Sat, 10:00-17:00, every 15 minutes):
+
+```bash
+crontab -e
+
+# Add this line:
+*/15 10-17 * * 1-6 /usr/bin/php /var/www/finance/svp/sync_pos_sales.php >> /var/log/pos_sync.log 2>&1
+```
+
+**Cron explanation:**
+- `*/15` = Every 15 minutes
+- `10-17` = Between 10:00 and 17:00
+- `* *` = Every day of month, every month
+- `1-6` = Monday (1) through Saturday (6)
 
 ---
 
