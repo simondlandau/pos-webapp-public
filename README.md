@@ -379,7 +379,8 @@ For complete schema, see
 #### Windows Scheduler:
 **Windows Task Scheduler (Primary automated sync)**
 - Create the batch file if you haven't already:
-```C:\xampp\htdocs\svp\run_sync.bat1. Windows Task Scheduler (Primary automated sync)
+```
+C:\xampp\htdocs\svp\run_sync.bat1. Windows Task Scheduler (Primary automated sync)
 ```
 - Enter this code in the file:
 ```@echo off
@@ -398,7 +399,8 @@ Repeat every: 15 minutes
 For a duration of: 8 hours
 ```
 **Action: Start program →** 
-```C:\xampp\htdocs\svp\run_sync.bat
+```
+C:\xampp\htdocs\svp\run_sync.bat
 ```
 **Conditions:**
 1. ✅ Run only if computer is on AC power (unchecked)
