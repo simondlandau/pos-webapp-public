@@ -776,7 +776,7 @@ if (file_exists('header.php')) {
         </div>
     </div>
 </div>
-
+<script>
 // Auto-refresh every 30 seconds
 setInterval(() => {
     location.reload();
@@ -873,7 +873,6 @@ function showNotification(message) {
     setTimeout(() => toast.remove(), 5000);
 }
 
-<script>
 // Manual sync function - renamed to avoid conflicts
 function runManualSync() {
     console.log('Manual sync button clicked');
@@ -946,7 +945,6 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('✗ Sync button elements not found!');
     }
 });
-</script>
 
 // Check for new scans every 10 seconds
 setInterval(checkForNewScans, 10000);
