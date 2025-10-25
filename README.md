@@ -217,7 +217,7 @@ Edit `config.example.php` with your credentials and rename to `config.php`:
  * 
  * Example configuration file for SVP Web Application.
  * Copy this file to config.php and update credentials accordingly.
- */
+``` 
 
 // ------------------ MySQL ------------------
 define("DB_HOST", "localhost");
