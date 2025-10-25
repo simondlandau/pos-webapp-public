@@ -208,16 +208,17 @@ For detailed scanner documentation, see [docs/SCANNER_README.md](docs/SCANNER_RE
 
 ## 🔧 Configuration
 
-### 1. Database Setup 
+## 1. Database Setup 
 
 Edit `config.example.php` with your credentials and rename to `config.php`:
+````
 <?php
 /**
  * config.example.php
  * 
  * Example configuration file for SVP Web Application.
  * Copy this file to config.php and update credentials accordingly.
-``` 
+
 ** ------------------ MySQL ------------------
 define("DB_HOST", "localhost");
 define("DB_NAME", "svp");
