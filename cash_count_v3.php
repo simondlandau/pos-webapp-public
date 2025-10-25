@@ -239,6 +239,21 @@ try {
     error_log("Current Running Total query failed: " . $e->getMessage());
     $currentRunningTotal = 0.0; 
 }
+// Current Weekly Total (All Tender + Donations)
+$currentWeeklyTotal = 0.0;
+try {
+    $stmt = $sqlsrv_pdo->query("
+        SELECT SUM(t.PN_CURR) AS weekTender
+        FROM svp.dbo.TENDER t
+        WHERE CAST(t.dtTimeStamp AS DATE) = CAST(GETDATE() AS DATE)
+    ");
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    $weekTender = $row ? (float)($row['weekTender'] ?? 0) : 0;
+    $currentWeeklyTotal = $weekTender;
+} catch (PDOException $e) { 
+    error_log("Current Weekly Total query failed: " . $e->getMessage());
+    $currentWeeklyTotal = 0.0; 
+}
 // Yesterday's Sales
 $yesterdaySales = 0.0;
 try {
@@ -310,65 +325,138 @@ include 'header.php';
         </div>
     </div>
 
-    <!-- Top row: Z Count, Cash Sales, All Sales -->
-    <div class="row mb-3 g-3 align-items-stretch">
-        <div class="col-md-2">
-            <div class="card text-center shadow-sm">
-                <div class="card-header bg-primary text-white">Z Count</div>
-                <div class="card-body"><h5 id="z-count">€0.00</h5></div>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card text-center shadow-sm">
-                <div class="card-header bg-success text-white">Cash Sales</div>
-                <div class="card-body"><h5 id="cash-sales">€<?= number_format($currentCashSales,2) ?></h5></div>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card text-center shadow-sm">
-                <div class="card-header bg-warning">All Other Sales</div>
-                <div class="card-body"><h5 id="all-sales">€<?= number_format($AE,2) ?></h5></div>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card text-center shadow-sm">
-                <div class="card-header" style="color: white; background: blue;">Donations</div>
-                <div class="card-body"><h5 id="donations">€<?= number_format($donations,2) ?></h5></div>
+<!-- =================== DASHBOARD TOP SECTION =================== -->
+<div class="container-fluid">
 
-            </div>
+  <!-- Top Row: Z Count, Cash Sales, All Sales, Donations, Loyalty, Weekly Target, Float -->
+  <div class="row mb-3 g-3 align-items-stretch">
+
+    <div class="col-md-2">
+      <div class="card text-center shadow-sm h-100">
+        <div class="card-header bg-primary text-white">Z Count</div>
+        <div class="card-body"><h5 id="z-count">€<?= number_format($zCount ?? 0,2) ?></h5></div>
+      </div>
+    </div>
+
+    <div class="col-md-2">
+      <div class="card text-center shadow-sm h-100">
+        <div class="card-header bg-success text-white">Cash Sales</div>
+        <div class="card-body"><h5 id="cash-sales">€<?= number_format($currentCashSales,2) ?></h5></div>
+      </div>
+    </div>
+
+    <div class="col-md-2">
+      <div class="card text-center shadow-sm h-100">
+        <div class="card-header bg-warning">All Other Sales</div>
+        <div class="card-body"><h5 id="all-sales">€<?= number_format($AE,2) ?></h5></div>
+      </div>
+    </div>
+
+    <div class="col-md-2">
+      <div class="card text-center shadow-sm h-100">
+        <div class="card-header text-white" style="background: blue;">Donations</div>
+        <div class="card-body"><h5 id="donations">€<?= number_format($donations,2) ?></h5></div>
+      </div>
+    </div>
+
+    <div class="col-md-2">
+      <div class="card text-center shadow-sm h-100">
+        <div class="card-header text-dark" style="background: #FA8072;">Loyalty</div>
+        <div class="card-body"><h5 id="loyalty">€<?= number_format($loyalty,2) ?></h5></div>
+      </div>
+    </div>
+
+    <!-- FLOAT -->
+    <div class="col-md-2">
+      <div class="card shadow-sm h-100">
+        <div class="card-header bg-light fw-semibold">FLOAT</div>
+        <div class="card-body p-2">
+          <table class="table table-borderless mb-0 small align-middle">
+            <tr>
+              <th>Current</th>
+              <td><input type="number" id="float-current" readonly class="form-control form-control-sm text-end"></td>
+            </tr>
+            <tr>
+              <th>Previous</th>
+              <td><input type="number" id="float-previous" step="0.01" readonly
+                         class="form-control form-control-sm text-end"
+                         value="<?= number_format($prevFloatHeld, 2, '.', '') ?>"></td>
+            </tr>
+            <tr>
+              <th>Balance</th>
+              <td><input type="number" id="float-balance" readonly class="form-control form-control-sm text-end"></td>
+            </tr>
+          </table>
         </div>
-        <div class="col-md-2">
-            <div class="card text-center shadow-sm">
-                <div class="card-header" style="color: black; background: #FA8072;">Loyalty</div>
-                <div class="card-body"><h5 id="loyalty">€<?= number_format($loyalty,2) ?></h5></div>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card shadow-sm float-card">
-                <div class="card-header float-row-header">FLOAT</div>
-                <div class="card-body p-2">
-                    <table class="table table-borderless mb-0">
-                        <tr>
-                            <th class="float-row-header">Current</th>
-                            <td><input type="number" id="float-current" readonly class="float-input"></td>
-                        </tr>
-                        <tr>
-                            <th class="float-row-header">Previous</th>
-                            <td>
-                                <input type="number" id="float-previous" step="0.01" readonly
-                                       class="form-control form-control-sm float-input float-previous"
-                                       value="<?= number_format($prevFloatHeld, 2, '.', '') ?>">
-                            </td>
-                        </tr>
-                        <tr>
-                            <th class="float-row-header">Float Balance</th>
-                            <td><input type="number" id="float-balance" readonly class="float-input"></td>
-                        </tr>
-                    </table>
+      </div>
+    </div>
+
+  </div> <!-- /row -->
+
+  <!-- Optional: tighten vertical rhythm between sections -->
+  <style>
+    .card-header { padding: 0.4rem 0.75rem; }
+    .card-body { padding: 0.5rem; }
+    .card-body h5 { margin-bottom: 0.25rem; }
+  </style>
+
+</div>
+<!-- =================== END DASHBOARD TOP SECTION =================== -->
+
+<?php
+// Calculate Weekly Target values
+$firstDayOfMonth = date('Y-m-01');
+$today = date('Y-m-d');
+$currentDayOfWeek = date('N'); // 1 (Monday) to 7 (Sunday)
+
+// Get sum of monthToDateTotal for this month
+$monthToDateTotal = 0.0;
+try {
+    $stmt = $sqlsrv_pdo->query("SELECT SUM(t.PN_CURR) AS month_total
+FROM svp.dbo.TENDER t
+WHERE CAST(t.dtTimeStamp AS DATE)
+BETWEEN CAST(DATEADD(DAY, -($currentDayOfWeek - 1), CAST(GETDATE() AS DATE)) AS DATE)
+AND '$today'
+");
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    $monthToDateTotal = $row ? (float)($row['month_total'] ?? 0) : 0;
+} catch (PDOException $e) { 
+    error_log("Weekly Total query failed: " . $e->getMessage());
+    $monthToDateTotal = 0.0; 
+}
+
+
+// Calculate expected sales based on day of week (Monday = 1, Sunday = 7)
+$dailyTarget = 833.33;
+$expectedSales = $dailyTarget * $currentDayOfWeek;
+
+// Calculate percentage of €5000 target
+$weeklyTarget = 5000;
+$targetPercentage = ($monthToDateTotal / $expectedSales) * 100;
+
+// Determine background color
+$isOnTarget = ($monthToDateTotal >= $expectedSales);
+$targetCardBg = $isOnTarget ? '#28a745' : '#FFA500'; // Green or Orange
+$targetCardTextColor = 'white';
+?>
+
+<!-- Weekly Target Card Row (between the two main rows) -->
+<div class="row mb-3 g-3">
+    <div class="col-md-2 offset-md-4">
+        <div class="card text-center shadow-sm" style="background: <?= $targetCardBg ?>; color: <?= $targetCardTextColor ?>;">
+            <div class="card-header" style="font-weight: 600;">Weekly Target</div>
+            <div class="card-body p-2">
+                <h5 class="mb-1">€<?= number_format($monthToDateTotal, 2) ?></h5>
+                <small style="font-size: 0.85em;">
+                    <?= number_format($targetPercentage, 1) ?>% of €<?= number_format($weeklyTarget, 0) ?>
+                </small>
+                <div style="font-size: 0.75em; margin-top: 5px; opacity: 0.9;">
+                    Target: €<?= number_format($expectedSales, 0) ?>
                 </div>
             </div>
         </div>
     </div>
+</div>
 
 <!-- Row below: LODGE, SALES Running Total, Cash Payments and Action Buttons -->
 <div class="row mb-3 g-3 align-items-stretch">
@@ -410,8 +498,7 @@ include 'header.php';
             <i class="fas fa-sync me-1"></i> Refresh Sales
         </button>
     </div>
-</div>
-    <!-- Main row: Cash Drawer, Change in Bags, System Count -->
+</div>    <!-- Main row: Cash Drawer, Change in Bags, System Count -->
     <div class="row g-4">
         <!-- Cash Drawer -->
         <div class="col-sm-5">
