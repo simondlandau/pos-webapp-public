@@ -202,7 +202,7 @@ The inventory scanner is a **Progressive Web App** that works on any smartphone 
 - Modern browser with getUserMedia API
 - Service Worker support
 
-For detailed scanner documentation, see [docs/SCANNER_README.md](docs/SCANNER_README.md)
+For detailed scanner documentation, see [docs/scanner_README.md](docs/scanner_README.md)
 
 ---
 
@@ -211,7 +211,7 @@ For detailed scanner documentation, see [docs/SCANNER_README.md](docs/SCANNER_RE
 ## 1. Database Setup 
 
 Edit `config.example.php` with your credentials and rename to `config.php`:
-````
+```
 <?php
 /**
  * config.example.php
@@ -294,7 +294,7 @@ $smtp_port = 587;
 ### 4. Test Installation
 
 Four test scripts are provided:
-```bash
+```
 # Test logo and branding
 https://your-domain.com/svp/test_logo.php
 
@@ -339,7 +339,8 @@ sudo certbot renew --dry-run
 ```
 
 ### File Permissions
-```bash
+```
+bash
 sudo chown -R www-data:www-data /var/www/html/svp
 sudo chmod 644 /var/www/html/svp/*.php
 sudo chmod 755 /var/www/html/svp
