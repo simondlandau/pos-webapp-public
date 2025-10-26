@@ -367,29 +367,6 @@ include 'header.php';
     </div>
 
     <!-- FLOAT -->
-    <div class="col-md-2">
-      <div class="card shadow-sm h-100">
-        <div class="card-header bg-light fw-semibold">FLOAT</div>
-        <div class="card-body p-2">
-          <table class="table table-borderless mb-0 small align-middle">
-            <tr>
-              <th>Current</th>
-              <td><input type="number" id="float-current" readonly class="form-control form-control-sm text-end"></td>
-            </tr>
-            <tr>
-              <th>Previous</th>
-              <td><input type="number" id="float-previous" step="0.01" readonly
-                         class="form-control form-control-sm text-end"
-                         value="<?= number_format($prevFloatHeld, 2, '.', '') ?>"></td>
-            </tr>
-            <tr>
-              <th>Balance</th>
-              <td><input type="number" id="float-balance" readonly class="form-control form-control-sm text-end"></td>
-            </tr>
-          </table>
-        </div>
-      </div>
-    </div>
 
   </div> <!-- /row -->
 
@@ -427,7 +404,7 @@ AND '$today'
 
 
 // Calculate expected sales based on day of week (Monday = 1, Sunday = 7)
-$dailyTarget = 833.33;
+$dailyTarget = 833.333334;
 $expectedSales = $dailyTarget * $currentDayOfWeek;
 
 // Calculate percentage of €5000 target
@@ -441,8 +418,9 @@ $targetCardTextColor = 'white';
 ?>
 
 <!-- Weekly Target Card Row (between the two main rows) -->
-<div class="row mb-3 g-3">
-    <div class="col-md-2 offset-md-4">
+<div class="row mb-3 g-3 align-items-stretch">
+
+<div class="col-md-2 offset-md-7">
         <div class="card text-center shadow-sm" style="background: <?= $targetCardBg ?>; color: <?= $targetCardTextColor ?>;">
             <div class="card-header" style="font-weight: 600;">Weekly Target</div>
             <div class="card-body p-2">
@@ -456,7 +434,35 @@ $targetCardTextColor = 'white';
             </div>
         </div>
     </div>
-</div>
+
+    <!-- FLOAT -->
+    <div class="col-md-2">
+      <div class="card shadow-sm h-100">
+        <div class="card-header bg-light fw-semibold">FLOAT</div>
+        <div class="card-body p-2">
+          <table class="table table-borderless mb-0 small align-middle">
+            <tr>
+              <th>Current</th>
+              <td><input type="number" id="float-current" readonly class="form-control form-control-sm text-end"></td>
+            </tr>
+            <tr>
+              <th>Previous</th>
+              <td><input type="number" id="float-previous" step="0.01" readonly
+                         class="form-control form-control-sm text-end"
+                         value="<?= number_format($prevFloatHeld, 2, '.', '') ?>"></td>
+            </tr>
+            <tr>
+              <th>Balance</th>
+              <td><input type="number" id="float-balance" readonly class="form-control form-control-sm text-end"></td>
+            </tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+
+
+</div> <!-- /row -->
 
 <!-- Row below: LODGE, SALES Running Total, Cash Payments and Action Buttons -->
 <div class="row mb-3 g-3 align-items-stretch">
