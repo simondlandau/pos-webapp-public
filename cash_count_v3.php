@@ -366,10 +366,8 @@ include 'header.php';
       </div>
     </div>
 
-    <!-- FLOAT -->
-
-  </div> <!-- /row -->
-
+  </div>
+  
   <!-- Optional: tighten vertical rhythm between sections -->
   <style>
     .card-header { padding: 0.4rem 0.75rem; }
@@ -420,7 +418,11 @@ $targetCardTextColor = 'white';
 <!-- Weekly Target Card Row (between the two main rows) -->
 <div class="row mb-3 g-3 align-items-stretch">
 
-<div class="col-md-2 offset-md-7">
+<div class="col-md-2">
+<img src="./halloween.jpg" alt="ad-hoc image" style="height:180px;" class="me-2">
+</div>
+
+<div class="col-md-2 offset-md-5">
         <div class="card text-center shadow-sm" style="background: <?= $targetCardBg ?>; color: <?= $targetCardTextColor ?>;">
             <div class="card-header" style="font-weight: 600;">Weekly Target</div>
             <div class="card-body p-2">
