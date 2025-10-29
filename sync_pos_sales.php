@@ -35,9 +35,29 @@ if (file_exists($lock_file)) {
 file_put_contents($lock_file, date('Y-m-d H:i:s'));
 
 // Track last sync time
+// Track last sync
 $sync_file = __DIR__ . '/tmp/last_pos_sync.txt';
-$last_sync = file_exists($sync_file) ? file_get_contents($sync_file) : date('Y-m-d H:i:s', strtotime('-1 hour'));
+if (file_exists($sync_file)) {
+    $last_sync_raw = trim(file_get_contents($sync_file));
+    // Validate and sanitize the date
+    $dt = DateTime::createFromFormat('Y-m-d H:i:s', $last_sync_raw);
+    if ($dt && $dt->format('Y-m-d H:i:s') === $last_sync_raw) {
+        $last_sync = $last_sync_raw;
+    } else {
+        // Invalid date in file, use 1 hour ago
+        $last_sync = date('Y-m-d H:i:s', strtotime('-1 hour'));
+        error_log("Invalid date in sync file: $last_sync_raw");
+    }
+} else {
+    $last_sync = date('Y-m-d H:i:s', strtotime('-1 hour'));
+}
 
+// Additional safety: ensure date is within smalldatetime range
+$dt_check = new DateTime($last_sync);
+if ($dt_check->format('Y') < 1900 || $dt_check->format('Y') > 2079) {
+    $last_sync = date('Y-m-d H:i:s', strtotime('-1 hour'));
+    error_log("Date out of smalldatetime range, using fallback");
+}
 $log_output = "=== POS Sales Sync Started ===\n";
 $log_output .= "Time: " . date('Y-m-d H:i:s') . "\n";
 $log_output .= "Last sync: $last_sync\n\n";
