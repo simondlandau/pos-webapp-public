@@ -2,8 +2,8 @@
 require_once 'config.php';
 
 // Set page variables for header
-$pageTitle = 'Dashboard';
-$headerTitle = 'Example Retail POS Company Name';
+$pageTitle = 'SVP Dashboard';
+$headerTitle = 'SVP Dashboard - St. Vincents, Main Street, Letterkenny';
 $additionalCSS = '
 <style>
 .metric-card {
@@ -196,7 +196,7 @@ include 'header.php';
                 <div class="card-body text-center">
                     <h5 class="card-title">Inventory Scanning</h5>
                     <p class="card-text">Live Dashboard and Scan</p>
-                    <a href="inventory_dashboard.php" class="btn btn-success btn-lg">Inventory Scanner</a>
+                    <a href="inventory_dashboard.php" class="btn btn-success btn-lg">Inventory Dashboard</a>
                     <small class="d-block text-muted mt-2">Display live inventory and single/bulk scan items for floor display</small>
                 </div>
             </div>

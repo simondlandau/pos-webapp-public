@@ -60,8 +60,7 @@ if (!$hasTender) {
 }
 
 // ------------------ Step 1.5: MSSQL Aggregates ------------------
-$loyalty = $donations = $zCount = $CP = $cashSales = $allOtherSales = $currentFloat = $lodge = 0.0;
-$prevFloatHeld = 0.0;
+$Loyalty = $Donations = $zCount = $CP = $cashSales = $allOtherSales = $currentFloat = $Lodge = $prevFloatHeld = $Difference = 0.0;
 
 function euro($value) {
     return "€" . number_format($value, 2);
@@ -189,6 +188,34 @@ try {
     echo "<p style='color:red;'>Lodge query failed: {$e->getMessage()}</p>";
 }
 
+try {
+    // Difference from CashDecLines (PaymentNo = '01')
+    $stmt = $sqlsrv_pdo->query("
+        SELECT SUM(cdl.Difference) AS Difference
+        FROM CashDecLines cdl
+        INNER JOIN CashDecHeader cdh ON cdl.CashDecRef = cdh.CashDecRef
+        WHERE CAST(cdh.dtTimeStamp AS DATE) = CAST(GETDATE() AS DATE)
+          AND cdl.PaymentNo = '01'
+    ");
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    if ($row) $Difference = (float)($row['Difference'] ?? 0);
+} catch (PDOException $e) {
+    error_log("Difference query failed: " . $e->getMessage());
+}
+
+try {
+    // Difference Reason from CashDecHeader)
+    $stmt = $sqlsrv_pdo->query("
+SELECT cdh.ReasonText AS Reason
+        FROM svp.dbo.CashDecHeader cdh
+        WHERE CAST(cdh.dtTimeStamp AS DATE) = CAST(GETDATE() AS DATE)
+    ");
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    if ($row) $Reason = ($row['Reason'] ?? 0);
+} catch (PDOException $e) {
+    error_log("Reason query failed: " . $e->getMessage());
+}
+
 // Z Count Calculation
 $zCount = (($currentFloat - $prevFloatHeld) + $allOtherSales + $lodge);
 
@@ -218,10 +245,12 @@ echo "<div class='container mt-4'>
 <tr><td><b>Z Count</b></td><td>" . euro($zCount) . "</td></tr>
 <tr><td><b>Cash Sales</b></td><td>" . euro($cashSales) . "</td></tr>
 <tr><td><b>All Other Sales</b></td><td>" . euro($allOtherSales) . "</td></tr>
-<tr><td><b>Donations</b></td><td>" . euro($donations) . "</td></tr>
-<tr><td><b>Loyalty</b></td><td>" . euro($loyalty) . "</td></tr>
+<tr><td><b>Donations</b></td><td>" . euro($Donations) . "</td></tr>
+<tr><td><b>Loyalty</b></td><td>" . euro($Loyalty) . "</td></tr>
 <tr><td><b>Cash Payments</b></td><td>" . euro($CP) . "</td></tr>
 <tr><td><b>All Sales</b></td><td>" . euro($allSales) . "</td></tr>
+<tr><td><b>Difference</b></td><td>" . euro($Difference) . "</td></tr>
+<tr><td><b>Reason</b></td><td>" . ($Reason) . "</td></tr>
 <tr><td><b>Lodge</b></td><td>" . euro($lodge) . "</td></tr>
 <tr><td><b>Previous Day Float</b></td><td>" . euro($prevFloatHeld) . "</td></tr>
 </tbody>

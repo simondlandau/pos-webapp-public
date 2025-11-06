@@ -208,19 +208,6 @@ try {
 }
 
 try {
-    // Difference Reason from CashDecHeader)
-    $stmt = $sqlsrv_pdo->query("
-SELECT cdh.ReasonText AS Reason
-        FROM svp.dbo.CashDecHeader cdh
-        WHERE CAST(cdh.dtTimeStamp AS DATE) = CAST(GETDATE() AS DATE)
-    ");
-    $row = $stmt->fetch(PDO::FETCH_ASSOC);
-    if ($row) $Reason = ($row['Reason'] ?? 0);
-} catch (PDOException $e) {
-    error_log("Reason query failed: " . $e->getMessage());
-}
-
-try {
     // Z Count calculation: (((CurrentFloat + AE + Lodge) - PreviousDayFloat) - Difference)
     $zCount = ((($currentFloat - $prevFloatHeld) + $allOtherSales + $Lodge) - $Difference);
 } catch (Exception $e) {
@@ -318,7 +305,6 @@ $table = "
 <tr><td class='label'>Cash Payments</td><td class='value'>{$currency($CP)}</td></tr>
 <tr><td class='label'>All Sales</td><td class='value'>{$currency($allSales)}</td></tr>
 <tr><td class='label'>Difference</td><td class='value'>{$currency($Difference)}</td></tr>
-<tr><td class='label'>Reason</td><tdclass='value'>$Reason</td></tr>
 <tr><td class='label'>Lodge</td><td class='value'>{$currency($Lodge)}</td></tr>
 </table>
 ";
