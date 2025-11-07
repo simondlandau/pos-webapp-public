@@ -1,8 +1,8 @@
 # Ignore sensitive config and logs
 config.php
-*.log
 ssh_droplet.txt
 update_repo.sh
+updaterepo.sh
 
 # Ignore vendor libraries (can be restored with composer)
 vendor/
