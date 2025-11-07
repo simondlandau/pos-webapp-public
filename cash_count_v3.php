@@ -664,7 +664,7 @@ let saveTimeout;
         
         // Z Count calculation: NEW FORMULA
 //        const zCount = currentRunningTotal + floatBalance;
-	const sCount = AE + lodge + floatBalance + (sales);
+	const zCount = AE + lodge + floatBalance + (sales);
 
 const payload = {
             cashDrawer,

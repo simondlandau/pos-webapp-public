@@ -13,7 +13,7 @@ $logData = [
     'timestamp' => date('Y-m-d H:i:s'),
     'request' => 'MSSQL refresh'
 ];
-file_put_contents('debug_mssql.log', json_encode($logData) . "\n", FILE_APPEND);
+file_put_contents('./logs/debug_mssql.log', json_encode($logData) . "\n", FILE_APPEND);
 
 try {
     // Test MSSQL connection first
@@ -21,7 +21,7 @@ try {
         throw new Exception('MSSQL connection failed');
     }
 
-    file_put_contents('debug_mssql.log', "MSSQL connection OK\n", FILE_APPEND);
+    file_put_contents('./logs/debug_mssql.log', "MSSQL connection OK\n", FILE_APPEND);
 
     // Previous Day's Float (fallback to earlier days if needed)
     $PrevFloatHeld = 0.0;
@@ -37,9 +37,9 @@ try {
         ");
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         if ($row) $PrevFloatHeld = (float)($row['PrevFloatHeld'] ?? 0);
-        file_put_contents('debug_mssql.log', "PrevFloatHeld Query OK: $PrevFloatHeld\n", FILE_APPEND);
+        file_put_contents('./logs/debug_mssql.log', "PrevFloatHeld Query OK: $PrevFloatHeld\n", FILE_APPEND);
     } catch (Exception $e) {
-        file_put_contents('debug_mssql.log', "PrevFloatHeld Query failed: " . $e->getMessage() . "\n", FILE_APPEND);
+        file_put_contents('./logs/debug_mssql.log', "PrevFloatHeld Query failed: " . $e->getMessage() . "\n", FILE_APPEND);
         $PrevFloatHeld = 0.0;
     }
 
@@ -54,9 +54,9 @@ try {
         ");
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         if ($row) $AE = (float)($row['AE'] ?? 0);
-        file_put_contents('debug_mssql.log', "AE Query OK: $AE\n", FILE_APPEND);
+        file_put_contents('./logs/debug_mssql.log', "AE Query OK: $AE\n", FILE_APPEND);
     } catch (Exception $e) {
-        file_put_contents('debug_mssql.log', "AE Query failed: " . $e->getMessage() . "\n", FILE_APPEND);
+        file_put_contents('./logs/debug_mssql.log', "AE Query failed: " . $e->getMessage() . "\n", FILE_APPEND);
         $AE = 0.0;
     }
 
@@ -71,9 +71,9 @@ try {
         ");
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         if ($row) $CP = (float)($row['CP'] ?? 0);
-        file_put_contents('debug_mssql.log', "CP Query OK: $CP\n", FILE_APPEND);
+        file_put_contents('./logs/debug_mssql.log', "CP Query OK: $CP\n", FILE_APPEND);
     } catch (Exception $e) {
-        file_put_contents('debug_mssql.log', "CP Query failed: " . $e->getMessage() . "\n", FILE_APPEND);
+        file_put_contents('./logs/debug_mssql.log', "CP Query failed: " . $e->getMessage() . "\n", FILE_APPEND);
         $CP = 0.0;
     }
 
@@ -88,9 +88,9 @@ try {
         ");
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         if ($row) $CS = (float)($row['CashSales'] ?? 0);
-        file_put_contents('debug_mssql.log', "CS Query OK: $CS\n", FILE_APPEND);
+        file_put_contents('./logs/debug_mssql.log', "CS Query OK: $CS\n", FILE_APPEND);
     } catch (Exception $e) {
-        file_put_contents('debug_mssql.log', "CS Query failed: " . $e->getMessage() . "\n", FILE_APPEND);
+        file_put_contents('./logs/debug_mssql.log', "CS Query failed: " . $e->getMessage() . "\n", FILE_APPEND);
         $CS = 0.0;
     }
 
@@ -105,9 +105,9 @@ try {
         ");
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         if ($row) $allSales = (float)($row['Z_Sales'] ?? 0);
-        file_put_contents('debug_mssql.log', "All Sales Query OK: $allSales\n", FILE_APPEND);
+        file_put_contents('./logs/debug_mssql.log', "All Sales Query OK: $allSales\n", FILE_APPEND);
     } catch (Exception $e) {
-        file_put_contents('debug_mssql.log', "All Sales Query failed: " . $e->getMessage() . "\n", FILE_APPEND);
+        file_put_contents('./logs/debug_mssql.log', "All Sales Query failed: " . $e->getMessage() . "\n", FILE_APPEND);
         throw $e;
     }
 
@@ -122,9 +122,9 @@ try {
         ");
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         if ($row) $loyalty = (float)($row['Loyalty'] ?? 0);
-        file_put_contents('debug_mssql.log', "Loyalty Query OK: $loyalty\n", FILE_APPEND);
+        file_put_contents('./logs/debug_mssql.log', "Loyalty Query OK: $loyalty\n", FILE_APPEND);
     } catch (Exception $e) {
-        file_put_contents('debug_mssql.log', "Loyalty Query failed: " . $e->getMessage() . "\n", FILE_APPEND);
+        file_put_contents('./logs/debug_mssql.log', "Loyalty Query failed: " . $e->getMessage() . "\n", FILE_APPEND);
         $loyalty = 0.0;
     }
 
@@ -141,9 +141,9 @@ try {
         ");
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         if ($row) $donations = (float)($row['Donations'] ?? 0);
-        file_put_contents('debug_mssql.log', "Donations Query OK: $donations\n", FILE_APPEND);
+        file_put_contents('./logs/debug_mssql.log', "Donations Query OK: $donations\n", FILE_APPEND);
     } catch (Exception $e) {
-        file_put_contents('debug_mssql.log', "Donations Query failed: " . $e->getMessage() . "\n", FILE_APPEND);
+        file_put_contents('./logs/debug_mssql.log', "Donations Query failed: " . $e->getMessage() . "\n", FILE_APPEND);
         $donations = 0.0;
     }
 
@@ -158,9 +158,9 @@ try {
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         $allTender = $row ? (float)($row['AllTender'] ?? 0) : 0;
         $currentRunningTotal = $allTender + $donations;
-        file_put_contents('debug_mssql.log', "Current Running Total OK: $currentRunningTotal (AllTender: $allTender + Donations: $donations)\n", FILE_APPEND);
+        file_put_contents('./logs/debug_mssql.log', "Current Running Total OK: $currentRunningTotal (AllTender: $allTender + Donations: $donations)\n", FILE_APPEND);
     } catch (Exception $e) {
-        file_put_contents('debug_mssql.log', "Current Running Total Query failed: " . $e->getMessage() . "\n", FILE_APPEND);
+        file_put_contents('./logs/debug_mssql.log', "Current Running Total Query failed: " . $e->getMessage() . "\n", FILE_APPEND);
         $currentRunningTotal = 0.0;
     }
 
@@ -184,9 +184,9 @@ try {
         ");
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         if ($row) $yesterdaySales = (float)($row['YesterdaySales'] ?? 0);
-        file_put_contents('debug_mssql.log', "Yesterday Sales Query OK: $yesterdaySales\n", FILE_APPEND);
+        file_put_contents('./logs/debug_mssql.log', "Yesterday Sales Query OK: $yesterdaySales\n", FILE_APPEND);
     } catch (Exception $e) {
-        file_put_contents('debug_mssql.log', "Yesterday Sales Query failed: " . $e->getMessage() . "\n", FILE_APPEND);
+        file_put_contents('./logs/debug_mssql.log', "Yesterday Sales Query failed: " . $e->getMessage() . "\n", FILE_APPEND);
         $yesterdaySales = 0.0;
     }
 
@@ -205,12 +205,12 @@ try {
         'timestamp' => date('Y-m-d H:i:s')
     ];
 
-    file_put_contents('debug_mssql.log', "Response: " . json_encode($response) . "\n", FILE_APPEND);
+    file_put_contents('./logs/debug_mssql.log', "Response: " . json_encode($response) . "\n", FILE_APPEND);
     echo json_encode($response);
 
 } catch (Exception $e) {
     $error = $e->getMessage();
-    file_put_contents('debug_mssql.log', "ERROR: " . $error . "\n", FILE_APPEND);
+    file_put_contents('./logs/debug_mssql.log', "ERROR: " . $error . "\n", FILE_APPEND);
     
     http_response_code(500);
     echo json_encode([
