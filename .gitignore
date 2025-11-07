@@ -7,6 +7,7 @@ updaterepo.sh
 # Ignore vendor libraries (can be restored with composer)
 vendor/
 composer.lock
+/logs/*.log
 
 # Ignore OS & IDE files
 .DS_Store
