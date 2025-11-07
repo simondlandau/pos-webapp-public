@@ -13,7 +13,7 @@ $logData = [
     'timestamp' => date('Y-m-d H:i:s'),
     'request' => 'MSSQL refresh'
 ];
-file_put_contents('./logs/debug_mssql.log', json_encode($logData) . "\n", FILE_APPEND);
+file_put_contents('./logs/debug_mssql.log', json_encode($logData) . "\n");
 
 try {
     // Test MSSQL connection first

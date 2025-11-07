@@ -28,7 +28,7 @@ try {
         'method' => $_SERVER['REQUEST_METHOD'],
         'input' => $rawInput
     ];
-    @file_put_contents($logFile, json_encode($logEntry) . "\n", FILE_APPEND);
+    @file_put_contents($logFile, json_encode($logEntry) . "\n");
     
     if (!$rawInput) throw new Exception('No data received');
     
