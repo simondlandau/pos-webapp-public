@@ -405,9 +405,13 @@ AND '$today'
 $dailyTarget = 833.333334;
 $expectedSales = $dailyTarget * $currentDayOfWeek;
 
+// Calculate percentage of progressive target
+// $weeklyTarget = 5000;
+$targetPercentage = ($monthToDateTotal / $expectedSales) * 100;
+
 // Calculate percentage of €5000 target
 $weeklyTarget = 5000;
-$targetPercentage = ($monthToDateTotal / $expectedSales) * 100;
+$weeklyTargetPercentage = ($monthToDateTotal / $weeklyTarget) * 100;
 
 // Determine background color
 $isOnTarget = ($monthToDateTotal >= $expectedSales);
@@ -419,19 +423,19 @@ $targetCardTextColor = 'white';
 <div class="row mb-3 g-3 align-items-stretch">
 
 <div class="col-md-2">
-<img src="./ad-hoc.png" alt="ad-hoc image" style="width:300px;" class="me-2">
+<img src="./ad-hoc11.png" alt="ad-hoc image" style="width:300px;" class="me-2">
 </div>
 
 <div class="col-md-2 offset-md-5">
         <div class="card text-center shadow-sm" style="background: <?= $targetCardBg ?>; color: <?= $targetCardTextColor ?>;">
-            <div class="card-header" style="font-weight: 600;">Weekly Target</div>
+            <div class="card-header" style="font-weight: 600;">Progressive Weekly Target</div>
             <div class="card-body p-2">
                 <h5 class="mb-1">€<?= number_format($monthToDateTotal, 2) ?></h5>
                 <small style="font-size: 0.85em;">
-                    <?= number_format($targetPercentage, 1) ?>% of €<?= number_format($expectedSales, 0) ?>
+                    <?= number_format($targetPercentage, 1) ?>% expected to date: €<?= number_format($expectedSales, 0) ?>
                 </small>
-                <div style="font-size: 0.75em; margin-top: 5px; opacity: 0.9;">
-                    Target: €<?= number_format($weeklyTarget, 0) ?>
+                <div style="font-size: 0.85em; margin-top: 5px; opacity: 0.9;">
+                    <?= number_format($weeklyTargetPercentage, 1) ?>% of Target €<?= number_format($weeklyTarget, 0) ?>
                 </div>
             </div>
         </div>
