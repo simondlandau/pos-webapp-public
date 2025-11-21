@@ -110,7 +110,7 @@ $sales           = $existingData['sales'] ?? 0;
 $zCount          = $existingData['z_count'] ?? 0;
 $cashSales       = $existingData['cash_sales'] ?? 0;
 $allSales        = $existingData['all_sales'] ?? 0;
-$yesterdaySales  = $existingData['yesterday_sales'] ?? 0;
+// $yesterdaySales  = $existingData['yesterday_sales'] ?? 0;
 
 // ------------------ Fetch MSSQL data ------------------
 
@@ -432,7 +432,7 @@ $targetCardTextColor = 'white';
             <div class="card-body p-2">
                 <h5 class="mb-1">€<?= number_format($monthToDateTotal, 2) ?></h5>
                 <small style="font-size: 0.85em;">
-                    <?= number_format($targetPercentage, 1) ?>% expected to date: €<?= number_format($expectedSales, 0) ?>
+                    <?= number_format($targetPercentage, 1) ?>% of expected to date: €<?= number_format($expectedSales, 0) ?>
                 </small>
                 <div style="font-size: 0.85em; margin-top: 5px; opacity: 0.9;">
                     <?= number_format($weeklyTargetPercentage, 1) ?>% of Target €<?= number_format($weeklyTarget, 0) ?>
@@ -487,7 +487,7 @@ $targetCardTextColor = 'white';
     <div class="col-md-2">
         <div class="card text-center shadow-sm" style="background: #fff3b0;" id="yesterday-card">
             <div class="card-header"><?= $salesDate ? $salesDayName . ' ' . $salesDateFormatted .' Sales, at this time' : 'Previous Day Sales, at this time' ?></div>
-            <div class="card-body"><h5 id="F">€<?= number_format($yesterdaySales,2) ?></h5></div>
+            <div class="card-body"><h5 id="yesterday">€<?= number_format($yesterdaySales,2) ?></h5></div>
         </div>
     </div>
     <div class="col-md-2">
@@ -625,7 +625,7 @@ let saveTimeout;
     let currentCashSales = <?= json_encode($currentCashSales) ?>;
     let loyalty = <?= json_encode($loyalty) ?>;
     let currentRunningTotal = <?= json_encode($currentRunningTotal) ?>;
-    const yesterdaySales = <?= json_encode($yesterdaySales) ?>;
+    let yesterdaySales = <?= json_encode($yesterdaySales) ?>;
     const prevFloatHeld = <?= json_encode($prevFloatHeld) ?>;
     
     // Auto-save function with debouncing
@@ -728,6 +728,7 @@ function updateMSSQLData() {
                 allSales = data.allSales;
                 loyalty = data.loyalty;
                 currentRunningTotal = data.currentRunningTotal;
+                yesterdaySales = data.yesterdaySales;
                 
                 // Update displayed card values
                 document.getElementById('cash-sales').textContent = '€' + currentCashSales.toFixed(2);
@@ -735,6 +736,7 @@ function updateMSSQLData() {
                 document.getElementById('all-sales').textContent = '€' + AE.toFixed(2);
                 document.getElementById('loyalty').textContent = '€' + loyalty.toFixed(2);
                 document.getElementById('running-total').textContent = '€' + currentRunningTotal.toFixed(2);
+                document.getElementById('yesterday').textContent = '€' + yesterdaySales.toFixed(2);
                 
                 // Update donations if available
                 if (data.donations !== undefined) {
