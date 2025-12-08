@@ -2,8 +2,8 @@
 require_once 'config.php';
 
 // Set page variables for header
-$pageTitle = 'Reports';
-$headerTitle = 'Reports - POS Company Name';
+$pageTitle = 'SVP Reports';
+$headerTitle = 'SVP Reports - St. Vincents, Main Street, Letterkenny';
 $additionalCSS = '
 <style>
 .metric-card {
@@ -121,7 +121,22 @@ include 'header.php';
                 </div>
             </div>
         </div>
+
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm metric-card">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="bi bi-file-earmark-text-fill text-secondary" style="font-size: 3rem;"></i>
+                    </div>
+                    <h5 class="card-title">Weekly Summary</h5>
+                    <p class="card-text">Weekly Transaction summary report for head office. (White Book Helper)</p>
+                    <a href="weekly_report.php" class="btn btn-secondary btn-lg">Weekly Summary</a>
+                    <small class="d-block text-muted mt-2">White Book</small>
+                </div>
+            </div>
+        </div>
     </div>
+
 </div>
 
 <?php include 'footer.php'; ?>
