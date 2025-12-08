@@ -423,7 +423,7 @@ $targetCardTextColor = 'white';
 <div class="row mb-3 g-3 align-items-stretch">
 
 <div class="col-md-2">
-<img src="./ad-hoc11.png" alt="ad-hoc image" style="width:300px;" class="me-2">
+<img src="./ad-hoc12.png" alt="ad-hoc December" style="width:300px;" class="me-2">
 </div>
 
 <div class="col-md-2 offset-md-5">
