@@ -302,6 +302,27 @@ $bagDenoms = [5,10,20,50,100];
 $cashDrawerData  = $existingData['cash_drawer'] ?? [];
 $changeBagsData  = $existingData['change_bags'] ?? [];
 
+// ==================== FETCH WEEKLY TARGET VALUES FROM DATABASE ====================
+$dailyTarget = 833.333334;   // Default fallback
+$weeklyTarget = 5000;         // Default fallback
+
+try {
+    $stmt = $pdo->prepare("SELECT weekly_target, daily_target 
+                           FROM target 
+                           WHERE target_ID = 1");
+    $stmt->execute();
+    $targetData = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if ($targetData) {
+        $dailyTarget = (float)($targetData['daily_target'] ?? 833.333334);
+        $weeklyTarget = (float)($targetData['weekly_target'] ?? 5000);
+    }
+} catch (PDOException $e) {
+    error_log("Target fetch failed: " . $e->getMessage());
+    // Will use default values defined above
+}
+// ==================== END FETCH WEEKLY TARGET VALUES ====================
+
 include 'header.php';
 ?>
 
@@ -402,15 +423,14 @@ AND '$today'
 
 
 // Calculate expected sales based on day of week (Monday = 1, Sunday = 7)
-$dailyTarget = 833.333334;
+// Using $dailyTarget from database (fetched above)
 $expectedSales = $dailyTarget * $currentDayOfWeek;
 
 // Calculate percentage of progressive target
-// $weeklyTarget = 5000;
 $targetPercentage = ($monthToDateTotal / $expectedSales) * 100;
 
 // Calculate percentage of €5000 target
-$weeklyTarget = 5000;
+// Using $weeklyTarget from database (fetched above)
 $weeklyTargetPercentage = ($monthToDateTotal / $weeklyTarget) * 100;
 
 // Determine background color

@@ -26,10 +26,43 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_user'])) {
     }
 }
 
+// ✅ Update Weekly Target logic
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_target'])) {
+    $weekly_target = floatval($_POST['weekly_target']);
+    $work_days = intval($_POST['work_days']);
+    
+    if ($weekly_target > 0 && $work_days > 0) {
+        $daily_target = $weekly_target / $work_days;
+        
+        $stmt = $pdo->prepare("UPDATE target 
+                               SET weekly_target = :weekly_target, 
+                                   work_days = :work_days, 
+                                   daily_target = :daily_target 
+                               WHERE target_ID = 1");
+        $stmt->execute([
+            ':weekly_target' => $weekly_target,
+            ':work_days'     => $work_days,
+            ':daily_target'  => $daily_target
+        ]);
+        
+        $success_message = "Weekly target updated successfully!";
+    }
+}
+
 // ✅ Fetch all users
 $stmt = $pdo->query("SELECT id, forename, surname, email, phone, receive 
                      FROM users ORDER BY surname, forename");
 $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// ✅ Fetch current target values
+$stmt = $pdo->query("SELECT weekly_target, work_days, daily_target 
+                     FROM target WHERE target_ID = 1");
+$target = $stmt->fetch(PDO::FETCH_ASSOC);
+
+// Set defaults if no record exists
+if (!$target) {
+    $target = ['weekly_target' => 0, 'work_days' => 5, 'daily_target' => 0];
+}
 ?>
 
 <div class="container mt-4">
@@ -83,6 +116,40 @@ $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
         </tbody>
     </table>
 
+    <hr>
+
+    <!-- Weekly Target Section -->
+    <h3>Weekly Target</h3>
+    
+    <?php if (isset($success_message)): ?>
+        <div class="alert alert-success"><?php echo $success_message; ?></div>
+    <?php endif; ?>
+    
+    <form method="POST">
+        <div class="row mb-3">
+            <div class="col-md-3">
+                <label for="weekly_target" class="form-label">Weekly Target</label>
+                <input type="number" step="0.01" name="weekly_target" id="weekly_target" 
+                       class="form-control" value="<?php echo htmlspecialchars($target['weekly_target']); ?>" required>
+            </div>
+            <div class="col-md-3">
+                <label for="work_days" class="form-label">No. of Working Days</label>
+                <input type="number" step="1" min="1" max="7" name="work_days" id="work_days" 
+                       class="form-control" value="<?php echo htmlspecialchars($target['work_days']); ?>" required>
+            </div>
+            <div class="col-md-3">
+                <label for="daily_target" class="form-label">Daily Target (Calculated)</label>
+                <input type="text" id="daily_target" class="form-control" 
+                       value="<?php echo number_format($target['daily_target'], 2); ?>" readonly>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button type="submit" name="update_target" class="btn btn-success">Update Target</button>
+            </div>
+        </div>
+    </form>
+
+    <hr>
+
     <a href="reports.php" class="btn btn-secondary mt-3">Return to Menu</a>
 </div>
 
@@ -107,7 +174,17 @@ $(document).on("click", ".remove-user", function() {
         });
     }
 });
+
+// Calculate daily target in real-time
+$("#weekly_target, #work_days").on("input", function() {
+    var weeklyTarget = parseFloat($("#weekly_target").val()) || 0;
+    var workDays = parseInt($("#work_days").val()) || 1;
+    
+    if (workDays > 0) {
+        var dailyTarget = weeklyTarget / workDays;
+        $("#daily_target").val(dailyTarget.toFixed(2));
+    }
+});
 </script>
 
 <?php include "footer.php"; ?>
-
