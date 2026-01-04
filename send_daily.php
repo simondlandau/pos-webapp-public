@@ -221,6 +221,20 @@ SELECT cdh.ReasonText AS Reason
 }
 
 try {
+    // Operator from EMPLOY)
+    $stmt = $sqlsrv_pdo->query("
+SELECT emp.EM_NAME AS Operator
+        FROM svp.dbo.EMPLOY emp
+        INNER JOIN svp.dbo.CashDecHeader cdh ON emp.EM_CODE = cdh.EmpDecBy
+        WHERE CAST(cdh.dtTimeStamp AS DATE) = CAST(GETDATE() AS DATE)
+    ");
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    if ($row) $Operator = ($row['Operator'] ?? 0);
+} catch (PDOException $e) {
+    error_log("Operator query failed: " . $e->getMessage());
+}
+
+try {
     // Z Count calculation: (((CurrentFloat + AE + Lodge) - PreviousDayFloat) - Difference)
     $zCount = ((($currentFloat - $prevFloatHeld) + $allOtherSales + $Lodge) - $Difference);
 } catch (Exception $e) {
@@ -319,6 +333,7 @@ $table = "
 <tr><td class='label'>All Sales</td><td class='value'>{$currency($allSales)}</td></tr>
 <tr><td class='label'>Difference</td><td class='value'>{$currency($Difference)}</td></tr>
 <tr><td class='label'>Reason</td><tdclass='value'>$Reason</td></tr>
+<tr><td class='label'>Operator</td><tdclass='value'>$Operator</td></tr>
 <tr><td class='label'>Lodge</td><td class='value'>{$currency($Lodge)}</td></tr>
 </table>
 ";

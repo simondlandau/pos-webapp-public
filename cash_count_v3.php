@@ -305,9 +305,10 @@ $changeBagsData  = $existingData['change_bags'] ?? [];
 // ==================== FETCH WEEKLY TARGET VALUES FROM DATABASE ====================
 $dailyTarget = 833.333334;   // Default fallback
 $weeklyTarget = 5000;         // Default fallback
+$workDays = 6;         // Default fallback
 
 try {
-    $stmt = $pdo->prepare("SELECT weekly_target, daily_target 
+    $stmt = $pdo->prepare("SELECT weekly_target, work_days, daily_target 
                            FROM target 
                            WHERE target_ID = 1");
     $stmt->execute();
@@ -315,6 +316,7 @@ try {
     
     if ($targetData) {
         $dailyTarget = (float)($targetData['daily_target'] ?? 833.333334);
+        $workDays = (float)($targetData['work_days'] ?? 6);
         $weeklyTarget = (float)($targetData['weekly_target'] ?? 5000);
     }
 } catch (PDOException $e) {
@@ -401,8 +403,9 @@ include 'header.php';
 
 <?php
 // Calculate Weekly Target values
-$firstDayOfMonth = date('Y-m-01');
+$firstDayOfWeek = date('Y-m-d', strtotime('monday this week'));
 $today = date('Y-m-d');
+$firstDayOfMonth = date('Y-m-01');
 $currentDayOfWeek = date('N'); // 1 (Monday) to 7 (Sunday)
 
 // Get sum of monthToDateTotal for this month
@@ -421,10 +424,26 @@ AND '$today'
     $monthToDateTotal = 0.0; 
 }
 
+// Count actual days with sales this week
+$daysWithSales = 0;
+try {
+    $stmt = $sqlsrv_pdo->prepare("
+        SELECT COUNT(DISTINCT CAST(t.dtTimeStamp AS DATE)) AS days_with_sales
+        FROM svp.dbo.TENDER t
+        WHERE CAST(t.dtTimeStamp AS DATE) >= ?
+        AND CAST(t.dtTimeStamp AS DATE) <= ?
+        AND t.PN_CURR > 0
+    ");
+    $stmt->execute([$firstDayOfWeek, $today]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    $daysWithSales = $row ? (int)($row['days_with_sales'] ?? 0) : 0;
+} catch (PDOException $e) {
+    error_log("Days with sales query failed: " . $e->getMessage());
+    $daysWithSales = 0;
+}
 
-// Calculate expected sales based on day of week (Monday = 1, Sunday = 7)
-// Using $dailyTarget from database (fetched above)
-$expectedSales = $dailyTarget * $currentDayOfWeek;
+// Calculate expected sales based on ACTUAL days worked (with sales)
+$expectedSales = $dailyTarget * $daysWithSales;
 
 // Calculate percentage of progressive target
 $targetPercentage = ($monthToDateTotal / $expectedSales) * 100;
@@ -443,19 +462,19 @@ $targetCardTextColor = 'white';
 <div class="row mb-3 g-3 align-items-stretch">
 
 <div class="col-md-2">
-<img src="./ad-hoc12.png" alt="ad-hoc December" style="width:300px;" class="me-2">
+<img src="./ad-hoc01.jpg" alt="ad-hoc December" style="width:300px;" class="me-2">
 </div>
 
 <div class="col-md-2 offset-md-5">
         <div class="card text-center shadow-sm" style="background: <?= $targetCardBg ?>; color: <?= $targetCardTextColor ?>;">
             <div class="card-header" style="font-weight: 600;">Progressive Weekly Target</div>
             <div class="card-body p-2">
-                <h5 class="mb-1">€<?= number_format($monthToDateTotal, 2) ?></h5>
-                <small style="font-size: 0.85em;">
-                    <?= number_format($targetPercentage, 1) ?>% of expected to date: €<?= number_format($expectedSales, 0) ?>
+                <h5 class="mb-1" id="mtdTotal">€<?= number_format($monthToDateTotal, 2) ?></h5>
+                <small style="font-size: 0.85em;" id="tP">
+                    <?= number_format($targetPercentage, 1) ?>% of expected to date: €</small><small style="font-size: 0.85em;" id="eS"><?= number_format($expectedSales, 0) ?>
                 </small>
-                <div style="font-size: 0.85em; margin-top: 5px; opacity: 0.9;">
-                    <?= number_format($weeklyTargetPercentage, 1) ?>% of Target €<?= number_format($weeklyTarget, 0) ?>
+                <div><small style="font-size: 0.85em; margin-top: 5px; opacity: 0.9;" id="wTp">
+                    <?= number_format($weeklyTargetPercentage, 1) ?>% of Target €</small><small style="font-size: 0.85em; margin-top: 5px; opacity: 0.9;" id="wT"><?= number_format($weeklyTarget, 0) ?></small>
                 </div>
             </div>
         </div>
@@ -749,6 +768,11 @@ function updateMSSQLData() {
                 loyalty = data.loyalty;
                 currentRunningTotal = data.currentRunningTotal;
                 yesterdaySales = data.yesterdaySales;
+                weeklyTarget = data.weeklyTarget;
+                monthToDateTotal = data.monthToDateTotal;
+                expectedSales = data.expectedSales;
+                targetPercentage = data.targetPercentage;
+                weeklyTargetPercentage = data.weeklyTargetPercentage;
                 
                 // Update displayed card values
                 document.getElementById('cash-sales').textContent = '€' + currentCashSales.toFixed(2);
@@ -757,6 +781,11 @@ function updateMSSQLData() {
                 document.getElementById('loyalty').textContent = '€' + loyalty.toFixed(2);
                 document.getElementById('running-total').textContent = '€' + currentRunningTotal.toFixed(2);
                 document.getElementById('yesterday').textContent = '€' + yesterdaySales.toFixed(2);
+                document.getElementById('mtdTotal').textContent = '€' + monthToDateTotal.toFixed(2);
+                document.getElementById('tP').textContent = '€' + targetPercentage.toFixed(2);
+                document.getElementById('eS').textContent = '€' + expectedSales.toFixed(2);
+                document.getElementById('wTp').textContent = '€' + weeklyTargetPercentage.toFixed(2);
+                document.getElementById('wT').textContent = '€' + weeklyTarget.toFixed(2);
                 
                 // Update donations if available
                 if (data.donations !== undefined) {

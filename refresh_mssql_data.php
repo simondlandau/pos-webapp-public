@@ -43,7 +43,63 @@ try {
         $PrevFloatHeld = 0.0;
     }
 
-    // All Other Sales (AE) - PaymentNo != '01'
+
+// Weekly Target get data
+$dailyTarget = 833.333334;   // Default fallback
+$weeklyTarget = 5000;         // Default fallback
+
+try {
+    $stmt = $pdo->prepare("SELECT weekly_target, daily_target 
+                           FROM target 
+                           WHERE target_ID = 1");
+    $stmt->execute();
+    $targetData = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if ($targetData) {
+        $dailyTarget = (float)($targetData['daily_target'] ?? 833.333334);
+        $weeklyTarget = (float)($targetData['weekly_target'] ?? 5000);
+    }
+} catch (PDOException $e) {
+    error_log("Target fetch failed: " . $e->getMessage());
+    // Will use default values defined above
+}
+
+// Calculate Weekly Target values
+$firstDayOfMonth = date('Y-m-01');
+$today = date('Y-m-d');
+$currentDayOfWeek = date('N'); // 1 (Monday) to 7 (Sunday)
+
+// Get sum of monthToDateTotal for this month
+$monthToDateTotal = 0.0;
+try {
+    $stmt = $sqlsrv_pdo->query("SELECT SUM(t.PN_CURR) AS month_total
+FROM svp.dbo.TENDER t
+WHERE CAST(t.dtTimeStamp AS DATE)
+BETWEEN CAST(DATEADD(DAY, -($currentDayOfWeek - 1), CAST(GETDATE() AS DATE)) AS DATE)
+AND '$today'
+");
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($row) $monthToDateTotal = (float)($row['month_total'] ?? 0);
+        file_put_contents('./logs/debug_mssql.log', "month_total Query OK: $AE\n", FILE_APPEND);
+    } catch (Exception $e) {
+        file_put_contents('./logs/debug_mssql.log', "month_total Query failed: " . $e->getMessage() . "\n", FILE_APPEND);
+        $monthToDateTotal = 0.0;
+}
+
+// Calculate expected sales based on day of week (Monday = 1, Sunday = 7)
+// Using $dailyTarget from database (fetched above)
+$expectedSales = $dailyTarget * $currentDayOfWeek;
+
+// Calculate percentage of progressive target
+$targetPercentage = ($monthToDateTotal / $expectedSales) * 100;
+
+// Calculate percentage of €5000 target
+// Using $weeklyTarget from database (fetched above)
+$weeklyTargetPercentage = ($monthToDateTotal / $weeklyTarget) * 100;
+
+// End Weekly Target
+
+// All Other Sales (AE) - PaymentNo != '01'
     $AE = 0.0;
     try {
         $stmt = $sqlsrv_pdo->query("
