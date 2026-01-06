@@ -16,3 +16,23 @@ Thumbs.db
 .idea/
 .vscode/
 
+# Configuration files with credentials
+*.local.php
+
+# Logs
+logs/*.log
+!logs/.gitkeep
+
+# Uploads
+uploads/*
+!uploads/.gitkeep
+
+# Environment specific
+.env
+.env.local
+
+# Sensitive data
+backup/*.sql
+*.pem
+*.key
+

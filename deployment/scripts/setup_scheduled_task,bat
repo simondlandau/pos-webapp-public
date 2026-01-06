@@ -1,0 +1,81 @@
+@echo off
+REM Setup Scheduled Task for Daily Email Report
+REM Run as Administrator
+
+echo ============================================
+echo Scheduled Task Setup for Daily Email
+echo ============================================
+echo.
+
+REM Check if running as administrator
+net session >nul 2>&1
+if %errorLevel% == 0 (
+    echo Running with administrator privileges...
+    echo.
+) else (
+    echo ERROR: This script must be run as Administrator
+    pause
+    exit /b 1
+)
+
+REM Set variables
+set TASK_NAME=WebApp_DailyEmail
+set XAMPP_PATH=C:\xampp
+set PHP_PATH=%XAMPP_PATH%\php\php.exe
+set SCRIPT_PATH=%XAMPP_PATH%\htdocs\webapp\send_daily.php
+set LOG_PATH=%XAMPP_PATH%\htdocs\webapp\logs\scheduled_task.log
+
+REM Check if PHP and script exist
+if not exist "%PHP_PATH%" (
+    echo ERROR: PHP not found at %PHP_PATH%
+    pause
+    exit /b 1
+)
+
+if not exist "%SCRIPT_PATH%" (
+    echo ERROR: Script not found at %SCRIPT_PATH%
+    pause
+    exit /b 1
+)
+
+echo Creating scheduled task...
+echo Task Name: %TASK_NAME%
+echo PHP Path: %PHP_PATH%
+echo Script: %SCRIPT_PATH%
+echo Schedule: Daily at 6:00 AM
+echo.
+
+REM Delete existing task if it exists
+schtasks /Query /TN "%TASK_NAME%" >nul 2>&1
+if %errorLevel% == 0 (
+    echo Removing existing task...
+    schtasks /Delete /TN "%TASK_NAME%" /F
+)
+
+REM Create the scheduled task
+schtasks /Create /TN "%TASK_NAME%" /TR "\"%PHP_PATH%\" \"%SCRIPT_PATH%\" >> \"%LOG_PATH%\" 2>&1" /SC DAILY /ST 17:45/RU SYSTEM /RL HIGHEST /F
+
+if %errorLevel% == 0 (
+    echo.
+    echo ============================================
+    echo Scheduled Task Created Successfully!
+    echo ============================================
+    echo.
+    echo Task will run daily at 17:45
+    echo Log file: %LOG_PATH%
+    echo.
+    echo To view the task:
+    echo   schtasks /Query /TN "%TASK_NAME%" /V /FO LIST
+    echo.
+    echo To run manually:
+    echo   schtasks /Run /TN "%TASK_NAME%"
+    echo.
+    echo To delete the task:
+    echo   schtasks /Delete /TN "%TASK_NAME%" /F
+    echo.
+) else (
+    echo ERROR: Failed to create scheduled task
+    echo Error code: %errorLevel%
+)
+
+pause
