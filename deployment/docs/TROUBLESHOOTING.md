@@ -981,10 +981,10 @@ If none of these solutions work:
    - Include system information
 
 4. **Contact Support**
-   - Email: support@yourcompany.com
+   - Email: papasuite@gmail.com
    - Include diagnostic information collected above
 
 ---
 
-**Last Updated**: January 2025  
+**Last Updated**: January 2026  
 **Document Version**: 1.0.0

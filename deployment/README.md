@@ -5,7 +5,7 @@ This directory contains all the necessary files and documentation to deploy this
 ## 📋 Quick Start
 
 1. Read [INSTALLATION_GUIDE.md](./INSTALLATION_GUIDE.md) for complete step-by-step instructions
-2. Ensure your target system meets the [prerequisites](#prerequisites)
+2. Ensure your target system meets the [prerequisites](./docs/PREREQUISITES.md)
 3. Run the installation scripts as Administrator
 4. Configure your `config.php` based on `config.template.php`
 

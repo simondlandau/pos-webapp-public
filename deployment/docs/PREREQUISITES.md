@@ -540,5 +540,5 @@ If you encounter issues with prerequisites:
 
 ---
 
-**Last Updated**: January 2025  
+**Last Updated**: January 2026  
 **Document Version**: 1.0.0
