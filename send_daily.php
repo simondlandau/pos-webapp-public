@@ -324,7 +324,7 @@ try {
 // ------------------ Step 3: Build email content ------------------
 $currency = fn($v) => "&euro;" . number_format($v, 2);
 
-$logoPath = '/var/www/finance/svp/svplogo.png';
+$logoPath = 'svplogo.png';
 
 if (file_exists($logoPath)) {
     writeLog("Logo file confirmed at: {$logoPath}");
