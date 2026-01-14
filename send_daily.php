@@ -1,9 +1,8 @@
-﻿<?php
+<?php
 session_start();
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
-
 require_once "config.php"; // contains $sqlsrv_pdo + mailer config
 
 // Load PHPMailer
@@ -11,9 +10,36 @@ require_once "vendor/autoload.php";
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
+// ==================== LOGGING SETUP ====================
+$logFile = __DIR__ . '/send_daily_log.txt';
+
+function writeLog($message) {
+    global $logFile;
+    static $firstWrite = true;
+    $timestamp = date('Y-m-d H:i:s');
+    $logMessage = "[{$timestamp}] {$message}\n";
+    
+    // First write overwrites, subsequent writes append
+    if ($firstWrite) {
+        file_put_contents($logFile, $logMessage);
+        $firstWrite = false;
+    } else {
+        file_put_contents($logFile, $logMessage, FILE_APPEND);
+    }
+    
+    error_log($message); // Also keep standard error_log
+}
+
+// Start logging
+writeLog("========== SCRIPT STARTED ==========");
+writeLog("PHP Version: " . phpversion());
+writeLog("Script path: " . __FILE__);
+
 function sendMail($to, $name, $subject, $body, $config, $logoPath = null) {
     $mail = new PHPMailer(true);
     try {
+        writeLog("Attempting to send email to: {$to}");
+        
         $mail->isSMTP();
         $mail->Host       = $config['mailHost'];
         $mail->SMTPAuth   = true;
@@ -22,35 +48,50 @@ function sendMail($to, $name, $subject, $body, $config, $logoPath = null) {
         $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
         $mail->Port       = $config['mailPort'];
         
+        writeLog("SMTP Config - Host: {$mail->Host}, Port: {$mail->Port}, User: {$mail->Username}, Pass length: " . strlen($config['mailPassword']));
+        
+        // Enable verbose debug output
+        $mail->SMTPDebug = 2;
+        $mail->Debugoutput = function($str, $level) {
+            writeLog("SMTP DEBUG [{$level}]: {$str}");
+        };
+        
         // Set character encoding for proper Euro symbol display
         $mail->CharSet = 'UTF-8';
         $mail->Encoding = 'base64';
-
         $mail->setFrom($config['mailFrom'], 'SVP Finance');
         $mail->addAddress($to, $name);
-
+        
         // Embed logo as inline attachment if path provided
         if ($logoPath && file_exists($logoPath)) {
             $mail->addEmbeddedImage($logoPath, 'logo_cid', 'svplogo.png');
-            error_log("Logo embedded for {$to}");
+            writeLog("Logo embedded from: {$logoPath}");
         } else {
-            error_log("Logo NOT embedded for {$to} - path: " . ($logoPath ?? 'null'));
+            writeLog("Logo NOT embedded - path: " . ($logoPath ?? 'null') . ", exists: " . (file_exists($logoPath ?? '') ? 'yes' : 'no'));
         }
-
+        
         $mail->isHTML(true);
         $mail->Subject = $subject;
         $mail->Body    = $body;
-
-        $mail->send();
+        
+        writeLog("Email prepared - Subject: {$subject}");
+        writeLog("Body length: " . strlen($body) . " characters");
+        
+        $result = $mail->send();
+        writeLog("✓ PHPMailer send() returned TRUE for {$to}");
         return true;
+        
     } catch (Exception $e) {
-        error_log("Mailer Error ({$to}): {$mail->ErrorInfo}");
+        writeLog("✗ EXCEPTION for {$to}: {$mail->ErrorInfo}");
+        writeLog("Exception details: " . $e->getMessage());
+        writeLog("Stack trace: " . $e->getTraceAsString());
         return false;
     }
 }
 
 // ------------------ Step 1: Check MSSQL CashDecHeader has records today ------------------
 try {
+    writeLog("Checking for CashDecHeader records today...");
     $stmt = $sqlsrv_pdo->query("
         SELECT TOP 1 1 
         FROM CashDecHeader 
@@ -58,11 +99,12 @@ try {
     ");
     $hasTender = $stmt->fetch(PDO::FETCH_ASSOC);
     if (!$hasTender) {
-        error_log("No DECLARED records for today, aborting email send.");
+        writeLog("No DECLARED records for today, aborting email send.");
         exit;
     }
+    writeLog("CashDecHeader records found for today");
 } catch (PDOException $e) {
-    error_log("MSSQL check failed: " . $e->getMessage());
+    writeLog("MSSQL check failed: " . $e->getMessage());
     exit;
 }
 
@@ -70,7 +112,7 @@ try {
 $Loyalty = $Donations = $zCount = $cashSales = $allOtherSales = $currentFloat = $Lodge = $Difference = 0.0;
 
 try {
-    // Loyalty from CashDecLines (PaymentNo = '10')
+    writeLog("Fetching Loyalty data...");
     $stmt = $sqlsrv_pdo->query("
         SELECT SUM(cdl.TillTotal) AS Loyalty
         FROM CashDecLines cdl
@@ -80,12 +122,13 @@ try {
     ");
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
     if ($row) $Loyalty = (float)($row['Loyalty'] ?? 0);
+    writeLog("Loyalty: " . $Loyalty);
 } catch (PDOException $e) {
-    error_log("Loyalty query failed: " . $e->getMessage());
+    writeLog("Loyalty query failed: " . $e->getMessage());
 }
 
 try {
-    // Donations
+    writeLog("Fetching Donations data...");
     $stmt = $sqlsrv_pdo->query("
         SELECT SUM(SN_Actual) AS Donations 
         FROM SALES 
@@ -95,12 +138,13 @@ try {
     ");
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
     if ($row) $Donations = (float)($row['Donations'] ?? 0);
+    writeLog("Donations: " . $Donations);
 } catch (PDOException $e) {
-    error_log("Donations query failed: " . $e->getMessage());
+    writeLog("Donations query failed: " . $e->getMessage());
 }
 
 try {
-    // Get previous day's float (fallback to earlier days if needed)
+    writeLog("Fetching previous day's float...");
     $stmt = $sqlsrv_pdo->query("
         SELECT TOP 1 SUM(cdl.FloatHeld) AS PrevFloatHeld
         FROM CashDecLines cdl
@@ -112,13 +156,14 @@ try {
     ");
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
     $prevFloatHeld = $row ? (float)($row['PrevFloatHeld'] ?? 0) : 0;
+    writeLog("Previous Float: " . $prevFloatHeld);
 } catch (PDOException $e) {
-    error_log("Previous Float query failed: " . $e->getMessage());
+    writeLog("Previous Float query failed: " . $e->getMessage());
     $prevFloatHeld = 0;
 }
 
 try {
-    // All Other Sales from CashDecLines (PaymentNo = '04')
+    writeLog("Fetching All Other Sales...");
     $stmt = $sqlsrv_pdo->query("
         SELECT (SUM(cdl.TillTotal) - ($Loyalty)) AS AE
         FROM CashDecLines cdl
@@ -128,27 +173,28 @@ try {
     ");
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
     if ($row) $allOtherSales = (float)($row['AE'] ?? 0);
+    writeLog("All Other Sales: " . $allOtherSales);
 } catch (PDOException $e) {
-    error_log("All Other Sales query failed: " . $e->getMessage());
+    writeLog("All Other Sales query failed: " . $e->getMessage());
 }
 
 try {
-// Cash Payments (CP) - PN_RECTYPE = '13'
+    writeLog("Fetching Cash Payments...");
     $stmt = $sqlsrv_pdo->query("
          SELECT SUM(t.PN_CURR) AS CP
         FROM svp.dbo.TENDER t
         WHERE CAST(t.dtTimeStamp AS DATE) = CAST(GETDATE() AS DATE)
           AND t.PN_RECTYPE  ='13'
-
     ");
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
     if ($row) $CP = (float)($row['CP'] ?? 0);
+    writeLog("Cash Payments: " . $CP);
 } catch (PDOException $e) {
-    error_log("Cash Payments query failed: " . $e->getMessage());
+    writeLog("Cash Payments query failed: " . $e->getMessage());
 }
 
 try {
-    // Cash Sales from CashDecLines
+    writeLog("Fetching Cash Sales...");
     $stmt = $sqlsrv_pdo->query("
               SELECT (SUM(cdl.UserTotal) - SUM(cdl.FloatHeld)) AS CashSales
         FROM CashDecLines cdl
@@ -158,12 +204,13 @@ try {
     ");
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
     if ($row) $cashSales = (float)($row['CashSales'] ?? 0);
+    writeLog("Cash Sales: " . $cashSales);
 } catch (PDOException $e) {
-    error_log("Cash Sales query failed: " . $e->getMessage());
+    writeLog("Cash Sales query failed: " . $e->getMessage());
 }
 
 try {
-    // Current Float from CashDecLines (PaymentNo = '01')
+    writeLog("Fetching Current Float...");
     $stmt = $sqlsrv_pdo->query("
         SELECT SUM(cdl.FloatHeld) AS FloatHeld
         FROM CashDecLines cdl
@@ -173,12 +220,13 @@ try {
     ");
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
     if ($row) $currentFloat = (float)($row['FloatHeld'] ?? 0);
+    writeLog("Current Float: " . $currentFloat);
 } catch (PDOException $e) {
-    error_log("Current Float query failed: " . $e->getMessage());
+    writeLog("Current Float query failed: " . $e->getMessage());
 }
 
 try {
-    // Lodge from CashDecLines (PaymentNo = '01')
+    writeLog("Fetching Lodge...");
     $stmt = $sqlsrv_pdo->query("
         SELECT SUM(cdl.Lodged) AS Lodge
         FROM CashDecLines cdl
@@ -188,12 +236,13 @@ try {
     ");
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
     if ($row) $Lodge = (float)($row['Lodge'] ?? 0);
+    writeLog("Lodge: " . $Lodge);
 } catch (PDOException $e) {
-    error_log("Lodge query failed: " . $e->getMessage());
+    writeLog("Lodge query failed: " . $e->getMessage());
 }
 
 try {
-    // Difference from CashDecLines (PaymentNo = '01')
+    writeLog("Fetching Difference...");
     $stmt = $sqlsrv_pdo->query("
         SELECT SUM(cdl.Difference) AS Difference
         FROM CashDecLines cdl
@@ -203,12 +252,13 @@ try {
     ");
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
     if ($row) $Difference = (float)($row['Difference'] ?? 0);
+    writeLog("Difference: " . $Difference);
 } catch (PDOException $e) {
-    error_log("Difference query failed: " . $e->getMessage());
+    writeLog("Difference query failed: " . $e->getMessage());
 }
 
 try {
-    // Difference Reason from CashDecHeader)
+    writeLog("Fetching Difference Reason...");
     $stmt = $sqlsrv_pdo->query("
 SELECT cdh.ReasonText AS Reason
         FROM svp.dbo.CashDecHeader cdh
@@ -216,12 +266,13 @@ SELECT cdh.ReasonText AS Reason
     ");
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
     if ($row) $Reason = ($row['Reason'] ?? 0);
+    writeLog("Reason: " . $Reason);
 } catch (PDOException $e) {
-    error_log("Reason query failed: " . $e->getMessage());
+    writeLog("Reason query failed: " . $e->getMessage());
 }
 
 try {
-    // Operator from EMPLOY)
+    writeLog("Fetching Operator...");
     $stmt = $sqlsrv_pdo->query("
 SELECT emp.EM_NAME AS Operator
         FROM svp.dbo.EMPLOY emp
@@ -230,56 +281,60 @@ SELECT emp.EM_NAME AS Operator
     ");
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
     if ($row) $Operator = ($row['Operator'] ?? 0);
+    writeLog("Operator: " . $Operator);
 } catch (PDOException $e) {
-    error_log("Operator query failed: " . $e->getMessage());
+    writeLog("Operator query failed: " . $e->getMessage());
 }
 
 try {
-    // Z Count calculation: (((CurrentFloat + AE + Lodge) - PreviousDayFloat) - Difference)
     $zCount = ((($currentFloat - $prevFloatHeld) + $allOtherSales + $Lodge) - $Difference);
+    writeLog("Z Count calculated: " . $zCount);
 } catch (Exception $e) {
-    error_log("Z Count calculation failed: " . $e->getMessage());
+    writeLog("Z Count calculation failed: " . $e->getMessage());
     $zCount = 0;
 }
 
 try {
-    // All Sales calculation: allSales = (cashSales + allOtherSales + CP)
     $allSales = ($cashSales + $allOtherSales + $CP);
+    writeLog("All Sales calculated: " . $allSales);
 } catch (Exception $e) {
-    error_log("All Sales calculation failed: " . $e->getMessage());
-    $zCount = 0;
+    writeLog("All Sales calculation failed: " . $e->getMessage());
+    $allSales = 0;
 }
 
 // ------------------ Step 2: Get list of subscribed users from MySQL ------------------
 try {
+    writeLog("Fetching subscribed users from MySQL...");
     $stmt = $pdo->prepare("SELECT forename, email FROM svp.users WHERE receive = 1");
     $stmt->execute();
     $users = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
     if (empty($users)) {
-        error_log("No subscribed users found, no emails sent.");
+        writeLog("No subscribed users found, no emails sent.");
         exit;
     }
+    writeLog("Found " . count($users) . " subscribed users");
+    foreach ($users as $user) {
+        writeLog("  - {$user['forename']} <{$user['email']}>");
+    }
 } catch (PDOException $e) {
-    error_log("Failed to fetch users: " . $e->getMessage());
+    writeLog("Failed to fetch users: " . $e->getMessage());
     exit;
 }
 
 // ------------------ Step 3: Build email content ------------------
-// Use HTML entity for Euro symbol to ensure proper display across all email clients
 $currency = fn($v) => "&euro;" . number_format($v, 2);
 
-// Logo path - confirmed working from test
 $logoPath = '/var/www/finance/svp/svplogo.png';
 
-// Verify logo exists
 if (file_exists($logoPath)) {
-    error_log("Logo file confirmed at: {$logoPath}");
+    writeLog("Logo file confirmed at: {$logoPath}");
+    writeLog("Logo file size: " . filesize($logoPath) . " bytes");
+    writeLog("Logo file readable: " . (is_readable($logoPath) ? 'yes' : 'no'));
 } else {
-    error_log("WARNING: Logo file not found at: {$logoPath}");
+    writeLog("WARNING: Logo file not found at: {$logoPath}");
     $logoPath = null;
 }
 
-// Build email header - use CID (Content-ID) reference for inline image
 $emailHeader = "
 <!DOCTYPE html>
 <html>
@@ -319,7 +374,6 @@ $emailFooter = "
 </html>
 ";
 
-// Build data table
 $table = "
 <table>
 <tr><td class='label'>Current Float</td><td class='value'>{$currency($currentFloat)}</td></tr>
@@ -332,8 +386,8 @@ $table = "
 <tr><td class='label'>Cash Payments</td><td class='value'>{$currency($CP)}</td></tr>
 <tr><td class='label'>All Sales</td><td class='value'>{$currency($allSales)}</td></tr>
 <tr><td class='label'>Difference</td><td class='value'>{$currency($Difference)}</td></tr>
-<tr><td class='label'>Reason</td><tdclass='value'>$Reason</td></tr>
-<tr><td class='label'>Operator</td><tdclass='value'>$Operator</td></tr>
+<tr><td class='label'>Reason</td><td class='value'>$Reason</td></tr>
+<tr><td class='label'>Operator</td><td class='value'>$Operator</td></tr>
 <tr><td class='label'>Lodge</td><td class='value'>{$currency($Lodge)}</td></tr>
 </table>
 ";
@@ -347,16 +401,21 @@ $mailConfig = [
     'mailFrom'     => SMTP_FROM_EMAIL
 ];
 
+writeLog("Mail config prepared - Host: " . SMTP_HOST . ", Port: " . SMTP_PORT . ", From: " . SMTP_FROM_EMAIL);
+
 // ------------------ Step 5: Send emails ------------------
 $successCount = 0;
 $failCount = 0;
+
+writeLog("========== BEGINNING EMAIL SEND LOOP ==========");
 
 foreach ($users as $user) {
     $to = $user['email'];
     $name = $user['forename'];
     $subject = "End of Day Report - " . date("Y-m-d");
     
-    // Build personalized email body
+    writeLog("--- Processing user: {$name} <{$to}> ---");
+    
     $body = $emailHeader . "
         <p>Dear <strong>{$name}</strong>,</p>
         <p>Please find today's end of day figures below:</p>
@@ -367,17 +426,23 @@ foreach ($users as $user) {
     " . $emailFooter;
     
     if (sendMail($to, $name, $subject, $body, $mailConfig, $logoPath)) {
-        error_log("✓ Email sent successfully to {$to}");
+        writeLog("✓✓✓ Email sent successfully to {$to}");
         $successCount++;
     } else {
-        error_log("✗ Failed to send email to {$to}");
+        writeLog("✗✗✗ Failed to send email to {$to}");
         $failCount++;
     }
+    
+    writeLog(""); // Blank line for readability
 }
 
-// Log summary
-error_log("Email process completed: {$successCount} sent, {$failCount} failed");
+writeLog("========== EMAIL SEND LOOP COMPLETED ==========");
+writeLog("Final Summary: {$successCount} sent, {$failCount} failed");
+writeLog("========== SCRIPT ENDED ==========");
+writeLog("");
+writeLog("");
+
 echo "Email process completed.\n";
 echo "Successfully sent: {$successCount}\n";
 echo "Failed: {$failCount}\n";
-echo "Check logs for details.";
+echo "Check log file at: {$logFile}";
