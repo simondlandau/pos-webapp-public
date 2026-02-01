@@ -61,38 +61,85 @@ if ($salesDate) {
     $yesterdaySales = 0.0; 
     $yesterdayError = $e->getMessage();
 }
-
-// This Year to Date vs Last Year to Date
 try {
     $stmt = $sqlsrv_pdo->query("
         SELECT 
             -- This Year To Date
-            (SELECT ISNULL(SUM(CASE WHEN cdl.PaymentNo = '04' THEN cdl.TillTotal ELSE 0 END), 0) + 
-                    ISNULL(SUM(CASE WHEN cdl.PaymentNo = '01' THEN cdl.Lodged ELSE 0 END), 0)
-             FROM CashDecLines cdl
-             INNER JOIN CashDecHeader cdh ON cdl.CashDecRef = cdh.CashDecRef
-             WHERE CAST(cdh.dtTimeStamp AS DATE) >= DATEFROMPARTS(YEAR(GETDATE()), 1, 1)
-               AND CAST(cdh.dtTimeStamp AS DATE) < CAST(GETDATE() AS DATE)
-               AND cdl.PaymentNo IN ('01', '04')
+            (
+                -- Cash Sales (PaymentNo = '01')
+                (SELECT ISNULL(SUM(cdl.UserTotal) - SUM(cdl.FloatHeld), 0)
+                 FROM CashDecLines cdl
+                 INNER JOIN CashDecHeader cdh ON cdl.CashDecRef = cdh.CashDecRef
+                 WHERE CAST(cdh.dtTimeStamp AS DATE) >= DATEFROMPARTS(YEAR(GETDATE()), 1, 1)
+                   AND CAST(cdh.dtTimeStamp AS DATE) < CAST(GETDATE() AS DATE)
+                   AND cdl.PaymentNo = '01')
+                +
+                -- Non Cash B (PaymentNo = '04' + Loyalty)
+                (SELECT ISNULL(SUM(cdl.TillTotal), 0)
+                 FROM CashDecLines cdl
+                 INNER JOIN CashDecHeader cdh ON cdl.CashDecRef = cdh.CashDecRef
+                 WHERE CAST(cdh.dtTimeStamp AS DATE) >= DATEFROMPARTS(YEAR(GETDATE()), 1, 1)
+                   AND CAST(cdh.dtTimeStamp AS DATE) < CAST(GETDATE() AS DATE)
+                   AND cdl.PaymentNo = '04')
+                +
+                -- Loyalty (PaymentNo = '10')
+                (SELECT ISNULL(SUM(cdl.TillTotal), 0)
+                 FROM CashDecLines cdl
+                 INNER JOIN CashDecHeader cdh ON cdl.CashDecRef = cdh.CashDecRef
+                 WHERE CAST(cdh.dtTimeStamp AS DATE) >= DATEFROMPARTS(YEAR(GETDATE()), 1, 1)
+                   AND CAST(cdh.dtTimeStamp AS DATE) < CAST(GETDATE() AS DATE)
+                   AND cdl.PaymentNo = '10')
             ) AS ThisYearToDate,
             
             -- Last Year To Date
-            (SELECT ISNULL(SUM(CASE WHEN cdl.PaymentNo = '04' THEN cdl.TillTotal ELSE 0 END), 0) + 
-                    ISNULL(SUM(CASE WHEN cdl.PaymentNo = '01' THEN cdl.Lodged ELSE 0 END), 0)
-             FROM CashDecLines cdl
-             INNER JOIN CashDecHeader cdh ON cdl.CashDecRef = cdh.CashDecRef
-             WHERE CAST(cdh.dtTimeStamp AS DATE) >= DATEFROMPARTS(YEAR(GETDATE()) - 1, 1, 1)
-               AND CAST(cdh.dtTimeStamp AS DATE) < DATEADD(YEAR, -1, CAST(GETDATE() AS DATE))
-               AND cdl.PaymentNo IN ('01', '04')
+            (
+                -- Cash Sales
+                (SELECT ISNULL(SUM(cdl.UserTotal) - SUM(cdl.FloatHeld), 0)
+                 FROM CashDecLines cdl
+                 INNER JOIN CashDecHeader cdh ON cdl.CashDecRef = cdh.CashDecRef
+                 WHERE CAST(cdh.dtTimeStamp AS DATE) >= DATEFROMPARTS(YEAR(GETDATE()) - 1, 1, 1)
+                   AND CAST(cdh.dtTimeStamp AS DATE) < DATEADD(YEAR, -1, CAST(GETDATE() AS DATE))
+                   AND cdl.PaymentNo = '01')
+                +
+                -- Non Cash B
+                (SELECT ISNULL(SUM(cdl.TillTotal), 0)
+                 FROM CashDecLines cdl
+                 INNER JOIN CashDecHeader cdh ON cdl.CashDecRef = cdh.CashDecRef
+                 WHERE CAST(cdh.dtTimeStamp AS DATE) >= DATEFROMPARTS(YEAR(GETDATE()) - 1, 1, 1)
+                   AND CAST(cdh.dtTimeStamp AS DATE) < DATEADD(YEAR, -1, CAST(GETDATE() AS DATE))
+                   AND cdl.PaymentNo = '04')
+                +
+                -- Loyalty
+                (SELECT ISNULL(SUM(cdl.TillTotal), 0)
+                 FROM CashDecLines cdl
+                 INNER JOIN CashDecHeader cdh ON cdl.CashDecRef = cdh.CashDecRef
+                 WHERE CAST(cdh.dtTimeStamp AS DATE) >= DATEFROMPARTS(YEAR(GETDATE()) - 1, 1, 1)
+                   AND CAST(cdh.dtTimeStamp AS DATE) < DATEADD(YEAR, -1, CAST(GETDATE() AS DATE))
+                   AND cdl.PaymentNo = '10')
             ) AS LastYearToDate,
             
             -- Last Year Total
-            (SELECT ISNULL(SUM(CASE WHEN cdl.PaymentNo = '04' THEN cdl.TillTotal ELSE 0 END), 0) + 
-                    ISNULL(SUM(CASE WHEN cdl.PaymentNo = '01' THEN cdl.Lodged ELSE 0 END), 0)
-             FROM CashDecLines cdl
-             INNER JOIN CashDecHeader cdh ON cdl.CashDecRef = cdh.CashDecRef
-             WHERE YEAR(cdh.dtTimeStamp) = YEAR(GETDATE()) - 1
-               AND cdl.PaymentNo IN ('01', '04')
+            (
+                -- Cash Sales
+                (SELECT ISNULL(SUM(cdl.UserTotal) - SUM(cdl.FloatHeld), 0)
+                 FROM CashDecLines cdl
+                 INNER JOIN CashDecHeader cdh ON cdl.CashDecRef = cdh.CashDecRef
+                 WHERE YEAR(cdh.dtTimeStamp) = YEAR(GETDATE()) - 1
+                   AND cdl.PaymentNo = '01')
+                +
+                -- Non Cash B
+                (SELECT ISNULL(SUM(cdl.TillTotal), 0)
+                 FROM CashDecLines cdl
+                 INNER JOIN CashDecHeader cdh ON cdl.CashDecRef = cdh.CashDecRef
+                 WHERE YEAR(cdh.dtTimeStamp) = YEAR(GETDATE()) - 1
+                   AND cdl.PaymentNo = '04')
+                +
+                -- Loyalty
+                (SELECT ISNULL(SUM(cdl.TillTotal), 0)
+                 FROM CashDecLines cdl
+                 INNER JOIN CashDecHeader cdh ON cdl.CashDecRef = cdh.CashDecRef
+                 WHERE YEAR(cdh.dtTimeStamp) = YEAR(GETDATE()) - 1
+                   AND cdl.PaymentNo = '10')
             ) AS LastYearTotal
     ");
     
