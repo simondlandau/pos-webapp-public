@@ -343,7 +343,7 @@ include 'header.php';
                 ← Back to Dashboard
             </a>
             <div class="text-muted small">
-                Auto-saves every 150 secs. | Last saved: <span id="lastSaved">Never</span>
+                Updates every 2.5 min. | Last saved: <span id="lastSaved">Never</span>
             </div>
         </div>
     </div>
@@ -446,11 +446,11 @@ try {
 $expectedSales = $dailyTarget * $daysWithSales;
 
 // Calculate percentage of progressive target
-$targetPercentage = ($monthToDateTotal / $expectedSales) * 100;
+$targetPercentage = ($expectedSales > 0) ? (($monthToDateTotal / $expectedSales) * 100) : 0;
 
 // Calculate percentage of €5000 target
 // Using $weeklyTarget from database (fetched above)
-$weeklyTargetPercentage = ($monthToDateTotal / $weeklyTarget) * 100;
+$weeklyTargetPercentage = ($weeklyTarget > 0) ? (($monthToDateTotal / $weeklyTarget) * 100) : 0;
 
 // Determine background color
 $isOnTarget = ($monthToDateTotal >= $expectedSales);
@@ -663,9 +663,10 @@ let saveTimeout;
     let allSales = <?= json_encode($allSales) ?>;
     let currentCashSales = <?= json_encode($currentCashSales) ?>;
     let loyalty = <?= json_encode($loyalty) ?>;
+    let donations = <?= json_encode($donations) ?>;
     let currentRunningTotal = <?= json_encode($currentRunningTotal) ?>;
     let yesterdaySales = <?= json_encode($yesterdaySales) ?>;
-    const prevFloatHeld = <?= json_encode($prevFloatHeld) ?>;
+    let prevFloatHeld = <?= json_encode($prevFloatHeld) ?>;
     
     // Auto-save function with debouncing
     function autoSave() {
@@ -756,23 +757,50 @@ const payload = {
     }
 
 function updateMSSQLData() {
+    console.log('Starting MSSQL data refresh...');
+    
     fetch('refresh_mssql_data.php')
-        .then(response => response.json())
+        .then(response => {
+            console.log('Response status:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
+            console.log('Parsed data:', data);
+            
             if (data.success) {
-                // Update global JS variables
+                // Validate all required fields exist before updating
+                // USE THE ACTUAL KEYS FROM PHP (snake_case)
+                const requiredFields = ['AE', 'CP', 'CS', 'allSales', 'loyalty', 'donations', 
+                                       'currentRunningTotal', 'yesterdaySales', 'weekly_target', 
+                                       'month_total', 'expected_sales', 'target_percentage', 
+                                       'weekly_target_percentage', 'PrevFloatHeld'];
+                
+                const missingFields = requiredFields.filter(field => data[field] === undefined);
+                if (missingFields.length > 0) {
+                    console.error('Missing required fields:', missingFields);
+                    return;
+                }
+                
+                // Update global JS variables - MAP PHP KEYS TO JS VARIABLES
                 AE = data.AE;
                 CP = data.CP;
                 currentCashSales = data.CS;
                 allSales = data.allSales;
                 loyalty = data.loyalty;
+                donations = data.donations;
                 currentRunningTotal = data.currentRunningTotal;
                 yesterdaySales = data.yesterdaySales;
-                weeklyTarget = data.weeklyTarget;
-                monthToDateTotal = data.monthToDateTotal;
-                expectedSales = data.expectedSales;
-                targetPercentage = data.targetPercentage;
-                weeklyTargetPercentage = data.weeklyTargetPercentage;
+                weeklyTarget = data.weekly_target;              // PHP: weekly_target
+                monthToDateTotal = data.month_total;            // PHP: month_total
+                expectedSales = data.expected_sales;            // PHP: expected_sales
+                targetPercentage = data.target_percentage;      // PHP: target_percentage
+                weeklyTargetPercentage = data.weekly_target_percentage;  // PHP: weekly_target_percentage
+                prevFloatHeld = data.PrevFloatHeld;
+                
+                console.log('Global variables updated successfully');
                 
                 // Update displayed card values
                 document.getElementById('cash-sales').textContent = '€' + currentCashSales.toFixed(2);
@@ -781,37 +809,54 @@ function updateMSSQLData() {
                 document.getElementById('loyalty').textContent = '€' + loyalty.toFixed(2);
                 document.getElementById('running-total').textContent = '€' + currentRunningTotal.toFixed(2);
                 document.getElementById('yesterday').textContent = '€' + yesterdaySales.toFixed(2);
-                document.getElementById('mtdTotal').textContent = '€' + monthToDateTotal.toFixed(2);
-                document.getElementById('tP').textContent = '€' + targetPercentage.toFixed(2);
-                document.getElementById('eS').textContent = '€' + expectedSales.toFixed(2);
-                document.getElementById('wTp').textContent = '€' + weeklyTargetPercentage.toFixed(2);
-                document.getElementById('wT').textContent = '€' + weeklyTarget.toFixed(2);
                 
-                // Update donations if available
-                if (data.donations !== undefined) {
-                    const donationsField = document.getElementById('donations');
-                    if (donationsField) {
-                        donationsField.textContent = '€' + data.donations.toFixed(2);
-                    }
+                console.log('Card values updated');
+                
+                // Update Progressive Weekly Target card with proper formatting
+                document.getElementById('mtdTotal').textContent = '€' + monthToDateTotal.toFixed(2);
+                document.getElementById('tP').textContent = targetPercentage.toFixed(1) + '% of expected to date: €';
+                document.getElementById('eS').textContent = expectedSales.toFixed(0);
+                document.getElementById('wTp').textContent = weeklyTargetPercentage.toFixed(1) + '% of Target €';
+                document.getElementById('wT').textContent = weeklyTarget.toFixed(0);
+                
+                console.log('Target card updated');
+                
+                // Update donations field
+                const donationsField = document.getElementById('donations');
+                if (donationsField) {
+                    donationsField.value = donations.toFixed(2);
+                    console.log('Donations updated to:', donations);
                 }
                 
-                // Update previous float if provided
-                if (data.PrevFloatHeld !== undefined) {
-                    const prevFloatInput = document.getElementById('float-previous');
-                    if (prevFloatInput) {
-                        prevFloatInput.value = data.PrevFloatHeld.toFixed(2);
-                    }
+                // Update previous float
+                const prevFloatInput = document.getElementById('float-previous');
+                if (prevFloatInput) {
+                    prevFloatInput.value = prevFloatHeld.toFixed(2);
+                    console.log('Previous float updated to:', prevFloatHeld);
                 }
                 
                 // Recalculate all dependent values
-                recalc();
+                console.log('Calling recalc()...');
+                if (typeof recalc === 'function') {
+                    try {
+                        recalc();
+                        console.log('recalc() completed successfully');
+                    } catch (error) {
+                        console.error('Error in recalc():', error);
+                    }
+                } else {
+                    console.error('recalc() function not found');
+                }
                 
-                console.log('MSSQL data refreshed successfully', data);
+                console.log('MSSQL data refreshed successfully');
             } else {
-                console.error('MSSQL refresh failed:', data.error);
+                console.error('MSSQL refresh failed:', data.error || 'Unknown error');
             }
         })
-        .catch(err => console.error('Failed to refresh MSSQL data:', err));
+        .catch(err => {
+            console.error('Failed to refresh MSSQL data:', err);
+            console.error('Error details:', err.message, err.stack);
+        });
 }
 
 function recalc() {
