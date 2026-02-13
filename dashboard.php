@@ -3,7 +3,7 @@ require_once 'config.php';
 
 // Set page variables for header
 $pageTitle = 'SVP Dashboard';
-$headerTitle = 'SVP Dashboard - St. Vincents, Main Street, Letterkenny';
+$headerTitle = 'SVP Dashboard - St. Vincents Letterkenny, Main St.';
 $additionalCSS = '
 <style>
 .metric-card {
@@ -30,18 +30,42 @@ $additionalCSS = '
 $yesterdaySales = 0.0;
 try {
     $stmt = $sqlsrv_pdo->query("
-SELECT
-CAST(t.dtTimeStamp AS DATE) AS SalesDate,
-SUM(t.PN_CURR) AS YesterdaySales
-FROM svp.dbo.TENDER t
-WHERE CAST(t.dtTimeStamp AS DATE) < CAST(GETDATE() AS DATE)
-  AND CAST(t.dtTimeStamp AS DATE) = (
-      SELECT MAX(CAST(dtTimeStamp AS DATE))
-      FROM svp.dbo.TENDER
-      WHERE CAST(dtTimeStamp AS DATE) < CAST(GETDATE() AS DATE)
-      AND t.PN_TYPE  IN ('01', '04', '10')  -- Adjust column name and values as needed
-  )
-GROUP BY CAST(t.dtTimeStamp AS DATE)
+SELECT 
+            CAST(cdh.dtTimeStamp AS DATE) AS SalesDate,
+            
+            -- Cash Sales (PaymentNo = '01')
+            SUM(CASE WHEN cdl.PaymentNo = '01' THEN (cdl.UserTotal - cdl.FloatHeld) ELSE 0 END) AS CashSales,
+            
+            -- Non-Cash components
+            SUM(CASE WHEN cdl.PaymentNo = '02' THEN cdl.TillTotal ELSE 0 END) AS CHQ,
+            SUM(CASE WHEN cdl.PaymentNo = '10' THEN cdl.TillTotal ELSE 0 END) AS Loyalty,
+            SUM(CASE WHEN cdl.PaymentNo = '04' THEN cdl.TillTotal ELSE 0 END) AS CardPayments,
+            
+            -- Non-Cash B Total
+            (
+                SUM(CASE WHEN cdl.PaymentNo = '02' THEN cdl.TillTotal ELSE 0 END) +
+                SUM(CASE WHEN cdl.PaymentNo = '10' THEN cdl.TillTotal ELSE 0 END) +
+                SUM(CASE WHEN cdl.PaymentNo = '04' THEN cdl.TillTotal ELSE 0 END)
+            ) AS NCB,
+            
+            -- Yesterday's Total Sales (Cash + Non-Cash)
+            (
+                SUM(CASE WHEN cdl.PaymentNo = '01' THEN (cdl.UserTotal - cdl.FloatHeld) ELSE 0 END) +
+                SUM(CASE WHEN cdl.PaymentNo = '02' THEN cdl.TillTotal ELSE 0 END) +
+                SUM(CASE WHEN cdl.PaymentNo = '10' THEN cdl.TillTotal ELSE 0 END) +
+                SUM(CASE WHEN cdl.PaymentNo = '04' THEN cdl.TillTotal ELSE 0 END)
+            ) AS YesterdaySales
+            
+        FROM CashDecLines cdl
+        INNER JOIN CashDecHeader cdh ON cdl.CashDecRef = cdh.CashDecRef
+        WHERE CAST(cdh.dtTimeStamp AS DATE) = (
+            -- Get the most recent date with transactions before today
+            SELECT MAX(CAST(dtTimeStamp AS DATE))
+            FROM CashDecHeader
+            WHERE CAST(dtTimeStamp AS DATE) < CAST(GETDATE() AS DATE)
+        )
+        AND cdl.PaymentNo IN ('01', '02', '04', '10')
+        GROUP BY CAST(cdh.dtTimeStamp AS DATE)
     ");
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
     $yesterdaySales = $row ? (float)$row['YesterdaySales'] : 0.0;
